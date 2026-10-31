@@ -6,6 +6,7 @@ import { CameraRig } from './scene/CameraRig'
 import { Celebration } from './scene/Celebration'
 import { Clothes } from './scene/Clothes'
 import { ExperimentScene } from './scene/Experiment'
+import { Explore } from './scene/Explore'
 import { Internals } from './scene/Internals'
 import { Machine } from './scene/Machine'
 import { MicroWorld } from './scene/MicroWorld'
@@ -19,6 +20,7 @@ import { XrayBackdrop } from './scene/XrayDome'
 export function App() {
   const mode = useStore((s) => s.mode)
   const quality = useStore((s) => s.quality)
+  const explore = useStore((s) => s.explore)
   const setQuality = useStore((s) => s.setQuality)
   const maxDpr = Math.min(2, window.devicePixelRatio || 1)
   const roomRef = useRef<THREE.Group>(null)
@@ -62,7 +64,7 @@ export function App() {
           }}
         />
         <SimDriver />
-        <OrbitControls makeDefault enablePan={false} enableDamping dampingFactor={0.08} maxPolarAngle={Math.PI * 0.53} minDistance={0.3} maxDistance={4.5} />
+        <OrbitControls makeDefault enablePan={false} enableDamping dampingFactor={0.08} maxPolarAngle={explore ? Math.PI : Math.PI * 0.53} />
         <CameraRig />
         <Environment resolution={quality === 'high' ? 256 : 64} frames={1}>
           <Lightformer form="rect" intensity={3} position={[0, 4, 2]} scale={[6, 3, 1]} rotation-x={Math.PI / 2} />
@@ -86,6 +88,7 @@ export function App() {
           <Internals />
           <Clothes />
           <Celebration />
+          <Explore />
         </group>
         {mode === 'micro' && <MicroWorld />}
         {mode === 'experiment' && <ExperimentScene />}

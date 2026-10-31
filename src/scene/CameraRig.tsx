@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { bodies } from '../clothSim'
-import { PARTS } from '../data'
+import { PARTS, TUB_C } from '../data'
 import { useStore } from '../store'
 
 interface Tween {
@@ -70,6 +70,8 @@ export function CameraRig() {
       const h = homeView(aspect)
       camera.position.copy(h.pos)
       controls.target.copy(h.target)
+      controls.minDistance = 0.3
+      controls.maxDistance = 4.5
       controls.update()
       return
     }
@@ -137,6 +139,13 @@ export function CameraRig() {
         controls.maxDistance = 4.5
         break
       }
+      case 'explore': {
+        // 小さくなってガラス扉からドラムの中へ
+        start(TUB_C.clone().add(new THREE.Vector3(0.0, 0.03, 0.13)), TUB_C.clone().add(new THREE.Vector3(0, -0.01, -0.03)), 2.0, { toFov: 62 })
+        controls.minDistance = 0.04
+        controls.maxDistance = 0.17
+        break
+      }
       case 'experiment': {
         const e = experimentView(aspect)
         camera.position.copy(e.pos).add(new THREE.Vector3(0.6, 0.4, 1.2))
@@ -169,7 +178,7 @@ export function CameraRig() {
     if (k >= 1) {
       tween.current = null
       controls.enabled = true
-      if (tw.toFov !== BASE_FOV && !tw.onDone) {
+      if (tw.toFov !== BASE_FOV && !tw.onDone && !useStore.getState().explore) {
         camera.fov = BASE_FOV
         camera.updateProjectionMatrix()
       }
