@@ -4,7 +4,7 @@ import { resetSim, sim, startCycle, type CourseId, type PhaseId } from './sim'
 import { sound } from './sound'
 import { clearBodies, sendOut } from './clothSim'
 import { resetMicro } from './microState'
-import { SPOTS, type SpotId } from './explore'
+import { beginTour, endTour, jumpChapter, tour as tourState } from './tour'
 
 export type Step = 'intro' | 'choose' | 'detergent' | 'course' | 'running' | 'done' | 'finished'
 export type AppMode = 'wash' | 'micro' | 'experiment'
@@ -17,7 +17,7 @@ export type CamReq =
   | { kind: 'micro' }
   | { kind: 'experiment' }
   | { kind: 'fromCloth'; cloth: ClothId }
-  | { kind: 'explore' }
+
 
 export interface Hud {
   phase: PhaseId | null
@@ -60,12 +60,11 @@ interface State {
   expLanes: ExpLane[]
   expState: 'idle' | 'running' | 'done'
   expProgress: number[]
-  explore: boolean
-  ride: boolean
-  found: SpotId[]
-  spot: SpotId | null
-  exploreAt: number
-  masterAt: number
+  tour: boolean
+  tourCh: number
+  tourPaused: boolean
+  tourDone: boolean
+  tourAt: number
 
   openDoor: () => void
   closeDoor: () => void
@@ -93,11 +92,12 @@ interface State {
   setMode: (m: 'wash' | 'experiment') => void
   setLane: (i: number, lane: Partial<ExpLane>) => void
   runExperiment: () => void
-  enterExplore: () => void
-  exitExplore: () => void
-  toggleRide: () => void
-  discover: (id: SpotId) => void
-  closeSpot: () => void
+  startTour: () => void
+  exitTour: () => void
+  setTourChapter: (ch: number) => void
+  gotoChapter: (ch: number) => void
+  toggleTourPause: () => void
+  finishTour: () => void
 }
 
 const allBasket = () => Object.fromEntries(CLOTH_IDS.map((id) => [id, 'basket'])) as Record<ClothId, ItemLoc>
@@ -134,12 +134,11 @@ export const useStore = create<State>((set, get) => ({
   ],
   expState: 'idle',
   expProgress: [0, 0, 0, 0],
-  explore: false,
-  ride: false,
-  found: [],
-  spot: null,
-  exploreAt: 0,
-  masterAt: 0,
+  tour: false,
+  tourCh: 0,
+  tourPaused: false,
+  tourDone: false,
+  tourAt: 0,
 
   openDoor: () => {
     const { step } = get()
@@ -228,10 +227,10 @@ export const useStore = create<State>((set, get) => ({
   camTo: (c) => set({ cam: { ...c, n: ++camCounter } }),
   startZoom: (id) => {
     const { mode, zooming, items, step } = get()
-    if (mode !== 'wash' || zooming || items[id] !== 'drum') return
+    if (mode !== 'wash' || zooming || items[id] !== 'drum' || get().tour) return
     sound.whoosh()
     const det = step === 'intro' || step === 'choose' || step === 'detergent' ? true : get().detergent
-    set({ zooming: id, microCloth: id, microDetergent: det, focus: null, explore: false, ride: false, spot: null })
+    set({ zooming: id, microCloth: id, microDetergent: det, focus: null })
     get().camTo({ kind: 'zoom', cloth: id })
   },
   enterMicro: () => {
@@ -263,7 +262,7 @@ export const useStore = create<State>((set, get) => ({
     inDrum.forEach((id, i) => sendOut(id, i, inDrum.length))
     const next = { ...items }
     inDrum.forEach((id) => (next[id] = 'out'))
-    set({ doorOpen: true, items: next, step: 'finished', xray: false, focus: null, explore: false, ride: false, spot: null })
+    set({ doorOpen: true, items: next, step: 'finished', xray: false, focus: null })
     get().camTo({ kind: 'home' })
   },
   again: () => {
@@ -286,7 +285,11 @@ export const useStore = create<State>((set, get) => ({
   },
   setMode: (m) => {
     sound.click()
-    set({ mode: m, xray: false, focus: null, zooming: null, explore: false, ride: false, spot: null })
+    if (get().tour) {
+      endTour()
+      set({ tour: false })
+    }
+    set({ mode: m, xray: false, focus: null, zooming: null })
     get().camTo(m === 'experiment' ? { kind: 'experiment' } : { kind: 'home' })
   },
   setLane: (i, lane) => {
@@ -296,39 +299,33 @@ export const useStore = create<State>((set, get) => ({
     lanes[i] = { ...lanes[i], ...lane }
     set({ expLanes: lanes, expState: 'idle', expProgress: [0, 0, 0, 0] })
   },
-  enterExplore: () => {
-    const { mode, zooming, explore } = get()
-    if (mode !== 'wash' || zooming || explore) return
+  startTour: () => {
+    const { mode, zooming, tour } = get()
+    if (mode !== 'wash' || zooming || tour) return
     sound.whoosh()
-    set({ explore: true, ride: false, spot: null, xray: false, focus: null, exploreAt: performance.now() })
-    get().camTo({ kind: 'explore' })
+    beginTour()
+    set({ tour: true, tourCh: 0, tourPaused: false, tourDone: false, tourAt: performance.now(), xray: true, focus: null })
   },
-  exitExplore: () => {
-    if (!get().explore) return
+  exitTour: () => {
+    if (!get().tour) return
     sound.whoosh()
-    set({ explore: false, ride: false, spot: null })
+    endTour()
+    set({ tour: false, tourDone: false, xray: false, focus: null })
     get().camTo({ kind: 'home', dur: 1.6 })
   },
-  toggleRide: () => {
+  setTourChapter: (ch) => set({ tourCh: ch }),
+  gotoChapter: (ch) => {
     sound.click()
-    set({ ride: !get().ride })
+    jumpChapter(ch)
+    set({ tourCh: tourState.ch, tourDone: false, tourPaused: false })
   },
-  discover: (id) => {
-    const { found } = get()
-    const isNew = !found.includes(id)
-    const next = isNew ? [...found, id] : found
-    if (isNew && next.length === SPOTS.length) {
-      sound.melody()
-      set({ found: next, spot: id, masterAt: performance.now() })
-    } else {
-      if (isNew) sound.sparkle()
-      else sound.click()
-      set({ found: next, spot: id })
-    }
-  },
-  closeSpot: () => {
+  toggleTourPause: () => {
     sound.click()
-    set({ spot: null })
+    set({ tourPaused: !get().tourPaused })
+  },
+  finishTour: () => {
+    sound.melody()
+    set({ tourDone: true })
   },
   runExperiment: () => {
     if (get().expState === 'running') return

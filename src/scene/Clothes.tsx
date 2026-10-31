@@ -1,7 +1,7 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { addBody, bodies } from '../clothSim'
+import { addBody, bodies, type Body } from '../clothSim'
 import { CLOTH_IDS, CLOTH_MAP, type ClothId } from '../data'
 import { makeClothMaterial } from '../clothMaterial'
 import { sim } from '../sim'
@@ -18,7 +18,7 @@ export function Clothes() {
   )
 }
 
-function ClothItem({ id }: { id: ClothId }) {
+export function ClothItem({ id, map = bodies }: { id: ClothId; map?: Map<ClothId, Body> }) {
   const def = CLOTH_MAP[id]
   const group = useRef<THREE.Group>(null)
   const quality = useStore((s) => s.quality)
@@ -26,7 +26,7 @@ function ClothItem({ id }: { id: ClothId }) {
   const seg = quality === 'high' ? 22 : 12
   const geo = useMemo(() => new THREE.PlaneGeometry(def.size[0], def.size[1], seg, seg), [def, seg])
   const eyeMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2b1d14', roughness: 0.3 }), [])
-  useMemo(() => addBody(id), [id])
+  useMemo(() => addBody(id, map), [id, map])
   useEffect(
     () => () => {
       mat.dispose()
@@ -37,7 +37,7 @@ function ClothItem({ id }: { id: ClothId }) {
   useEffect(() => () => geo.dispose(), [geo])
 
   useFrame(() => {
-    const b = bodies.get(id)
+    const b = map.get(id)
     const g = group.current
     if (!b || !g) return
     g.position.copy(b.world)
@@ -57,7 +57,7 @@ function ClothItem({ id }: { id: ClothId }) {
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     const st = useStore.getState()
     if (e.delta > 10 || st.mode !== 'wash') return
-    const b = bodies.get(id)
+    const b = map.get(id)
     if (!b || b.mode !== 'drum') return
     e.stopPropagation()
     st.startZoom(id)

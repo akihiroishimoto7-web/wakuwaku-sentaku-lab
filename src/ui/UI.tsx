@@ -5,7 +5,7 @@ import { laneClean, EXP_LONG } from '../scene/Experiment'
 import { COURSES, COURSE_IDS, PHASES, SPIN_RPM, courseDuration } from '../sim'
 import { useStore, type Step } from '../store'
 import { ClothIcon } from './ClothIcon'
-import { ExploreUI } from './ExploreUI'
+import { TourUI } from './TourUI'
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
@@ -84,8 +84,8 @@ function WashUI() {
   const zooming = useStore((s) => s.zooming)
   const inDrum = Object.values(items).filter((v) => v === 'drum').length
   const idx = stepIndex(step, inDrum, !!course)
-  const explore = useStore((s) => s.explore)
-  if (explore) return <ExploreUI />
+  const tour = useStore((s) => s.tour)
+  if (tour) return <TourUI />
 
   return (
     <>
@@ -226,7 +226,7 @@ function Dock() {
           <b>{xray ? '🙈' : '👀'}</b>
           <span>{xray ? 'もどす' : 'なかをみる'}</span>
         </button>
-        <button className="tool explore" onClick={st.enterExplore}>
+        <button className="tool explore" onClick={st.startTour}>
           <b>🔦</b>
           <span>たんけん</span>
         </button>

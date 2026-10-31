@@ -31,13 +31,15 @@ export interface Body {
 }
 
 export const bodies = new Map<ClothId, Body>()
+// たんけん用：ドラムが空のときに入れる見本の服
+export const demoBodies = new Map<ClothId, Body>()
 const G = 9.8
 const tmpE = new THREE.Euler()
 const tmpQ = new THREE.Quaternion()
 const faceQ = new THREE.Quaternion()
 
-export function addBody(id: ClothId) {
-  if (bodies.has(id)) return bodies.get(id)!
+export function addBody(id: ClothId, map = bodies) {
+  if (map.has(id)) return map.get(id)!
   const def = CLOTH_MAP[id]
   const seed = Math.random() * 10
   const b: Body = {
@@ -65,7 +67,7 @@ export function addBody(id: ClothId) {
     glow: 0,
   }
   b.world.copy(b.from)
-  bodies.set(id, b)
+  map.set(id, b)
   return b
 }
 
@@ -85,6 +87,16 @@ export function clearBodies() {
   bodies.clear()
 }
 
+// 見本の服を最初からドラムの底に置く
+export function addDemoBody(id: ClothId, i: number) {
+  const b = addBody(id, demoBodies)
+  b.mode = 'drum'
+  b.p.set((i - 1.5) * 0.07, -0.16 + (i % 2) * 0.03, (i % 2 ? 0.04 : -0.05))
+  b.v.set(0, 0, 0)
+  b.scale.set(1, 1, 1)
+  return b
+}
+
 const bez = (out: THREE.Vector3, a: THREE.Vector3, c: THREE.Vector3, b: THREE.Vector3, t: number) => {
   const u = 1 - t
   out.set(
@@ -95,12 +107,12 @@ const bez = (out: THREE.Vector3, a: THREE.Vector3, c: THREE.Vector3, b: THREE.Ve
 }
 const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
 
-export function stepClothes(dt: number) {
+export function stepClothes(dt: number, map = bodies) {
   const time = sim.time
   const surfY = -TUB_R + sim.level * 2 * TUB_R
   const omega = sim.omega
   const pinned = Math.min(1, Math.abs(omega) / 14)
-  const list = [...bodies.values()]
+  const list = [...map.values()]
 
   for (const b of list) {
     if (b.mode === 'in') {

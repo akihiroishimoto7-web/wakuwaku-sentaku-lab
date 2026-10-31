@@ -2,7 +2,7 @@ import { Html, RoundedBox } from '@react-three/drei'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { DRUM_LEN, DRUM_R, PARTS, PART_IDS, TUB_C, TUB_LEN, TUB_R, type PartId } from '../data'
+import { AIR_PATH, DRUM_LEN, DRUM_R, PARTS, PART_IDS, TUB_C, TUB_LEN, TUB_R, type PartId } from '../data'
 import { partMats, registerPart } from '../partMats'
 import { sim } from '../sim'
 import { useStore } from '../store'
@@ -500,22 +500,6 @@ function DryerUnit() {
 }
 
 // ---- 温風の流れ（粒子） ----
-const AIR_PATH = new THREE.CatmullRomCurve3(
-  [
-    [0, 0.42, 0.05],
-    [0.08, 0.6, -0.08],
-    [0.12, 0.7, -0.13],
-    [0.15, 0.785, -0.12],
-    [0.06, 0.785, -0.12],
-    [-0.03, 0.785, -0.12],
-    [-0.12, 0.785, -0.12],
-    [-0.17, 0.785, -0.01],
-    [-0.07, 0.75, 0.16],
-    [0, 0.66, 0.17],
-    [-0.06, 0.5, 0.12],
-  ].map((p) => new THREE.Vector3(...(p as [number, number, number]))),
-  true,
-)
 const C_MOIST = new THREE.Color('#c9a6ff')
 const C_COLD = new THREE.Color('#4fb8ff')
 const C_HOT = new THREE.Color('#ff5a3c')
@@ -584,7 +568,8 @@ function PartLabels() {
   const focus = useStore((s) => s.focus)
   const mode = useStore((s) => s.mode)
   const setFocus = useStore((s) => s.setFocus)
-  if (!xray || focus || mode !== 'wash') return null
+  const tour = useStore((s) => s.tour)
+  if (!xray || focus || mode !== 'wash' || tour) return null
   return (
     <>
       {PART_IDS.map((id) => (

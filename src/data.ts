@@ -13,6 +13,24 @@ export const DRUM_LEN = 0.36
 export const DOOR_R = 0.19
 export const DOOR_GLASS_R = 0.145
 
+// 乾燥時の空気の通り道（ドラム → 除湿 → 加熱 → ファン → ドラム）
+export const AIR_PATH = new THREE.CatmullRomCurve3(
+  [
+    [0, 0.42, 0.05],
+    [0.08, 0.6, -0.08],
+    [0.12, 0.7, -0.13],
+    [0.15, 0.785, -0.12],
+    [0.06, 0.785, -0.12],
+    [-0.03, 0.785, -0.12],
+    [-0.12, 0.785, -0.12],
+    [-0.17, 0.785, -0.01],
+    [-0.07, 0.75, 0.16],
+    [0, 0.66, 0.17],
+    [-0.06, 0.5, 0.12],
+  ].map((p) => new THREE.Vector3(...(p as [number, number, number]))),
+  true,
+)
+
 // ---- 衣服 ----
 export type ClothId = 'shirt' | 'socks' | 'towel' | 'pants' | 'teddy'
 

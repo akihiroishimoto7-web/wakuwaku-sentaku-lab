@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
-import { stepClothes } from '../clothSim'
+import { demoBodies, stepClothes } from '../clothSim'
+import { stepTour } from '../tour'
 import { cleanRatio, remaining, sim, stepSim, totalProgress } from '../sim'
 import { sound } from '../sound'
 import { useStore } from '../store'
@@ -17,19 +18,23 @@ export function SimDriver() {
     let scale = st.slow ? 0.3 : 1
     if (st.paused && st.step === 'running') scale = 0
     if (st.mode !== 'wash') scale = 0
+    // たんけん中は本物の洗濯をひと休みして、ツアー用の動きを見せる
+    if (st.tour && st.mode === 'wash') scale = st.tourPaused ? 0 : st.slow ? 0.4 : 1
     sim.timeScale = scale
     const wasRunning = sim.running
     const dt = real * scale
     const n = Math.max(1, Math.ceil(dt / 0.02))
     for (let i = 0; i < n; i++) {
-      stepSim(dt / n)
+      if (st.tour) stepTour(dt / n)
+      else stepSim(dt / n)
       stepClothes(dt / n)
+      if (demoBodies.size) stepClothes(dt / n, demoBodies)
     }
     sim.dt = dt
     sim.xray += ((st.xray && st.mode === 'wash' ? 1 : 0) - sim.xray) * Math.min(1, real * 3.5)
     sound.update(sim, st.mode === 'wash' && scale > 0)
 
-    if (wasRunning && !sim.running && sim.done) st.finishCycle()
+    if (!st.tour && wasRunning && !sim.running && sim.done) st.finishCycle()
 
     hudTimer.current += real
     if (hudTimer.current > 0.2) {
