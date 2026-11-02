@@ -51,16 +51,17 @@ export function CameraRig() {
   const size = useThree((s) => s.size)
   const cam = useStore((s) => s.cam)
   const mode = useStore((s) => s.mode)
+  const tourOn = useStore((s) => s.tour)
   const tween = useRef<Tween | null>(null)
   const first = useRef(true)
 
   // 画面下の操作パネルぶん、描画を上へずらす（オービットの中心は変えない）
   useEffect(() => {
     const portrait = size.width < size.height
-    const off = mode === 'micro' ? 0 : size.height * (portrait ? 0.13 : 0.1)
+    const off = mode === 'micro' ? 0 : size.height * (tourOn ? (portrait ? 0.1 : 0.06) : portrait ? 0.13 : 0.1)
     camera.setViewOffset(size.width, size.height, 0, off, size.width, size.height)
     camera.updateProjectionMatrix()
-  }, [camera, size, mode])
+  }, [camera, size, mode, tourOn])
 
   useEffect(() => {
     if (!controls) return

@@ -31,6 +31,8 @@ function TopBar() {
   const toggleMute = useStore((s) => s.toggleMute)
   const setMode = useStore((s) => s.setMode)
   const step = useStore((s) => s.step)
+  const tour = useStore((s) => s.tour)
+  if (tour) return null
   return (
     <header className="topbar">
       <button className="title" onClick={() => useStore.getState().showSplash()} aria-label="はじめの がめんへ">

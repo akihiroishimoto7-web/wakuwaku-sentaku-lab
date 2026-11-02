@@ -17,6 +17,8 @@ export interface Chapter {
   look: (u: number, out: THREE.Vector3) => void
   demo: (t: number, dur: number, dt: number) => void
   fx?: 'speed'
+  // しずくが進む本当の水の通り道（あるときは、少しはなれた所からしずくを見まもる）
+  drop?: THREE.CatmullRomCurve3
 }
 
 type P = [number, number, number]
@@ -32,25 +34,7 @@ const alternate = (t: number, amp: number) => {
   return s < 2.8 ? amp : s < 3.2 ? 0 : s < 6.0 ? -amp : 0
 }
 const along = (c: THREE.CatmullRomCurve3) => (u: number, out: THREE.Vector3) => void c.getPointAt(ease(u), out)
-const ahead = (c: THREE.CatmullRomCurve3, d = 0.15, dy = -0.02) => (u: number, out: THREE.Vector3) => {
-  const e = ease(u)
-  if (e + d <= 1) c.getPointAt(e + d, out)
-  else {
-    // 終点の先は接線方向に伸ばす
-    c.getPointAt(1, out).addScaledVector(c.getTangentAt(1), (e + d - 1) * c.getLength())
-  }
-  out.y += dy
-}
 const fixed = (p: P) => (_u: number, out: THREE.Vector3) => void out.set(...p)
-const mix = (a: (u: number, o: THREE.Vector3) => void, b: (u: number, o: THREE.Vector3) => void, from: number, to: number) => {
-  const tmp = new THREE.Vector3()
-  return (u: number, out: THREE.Vector3) => {
-    a(u, out)
-    b(u, tmp)
-    out.lerp(tmp, smooth(from, to, u))
-  }
-}
-
 // 機械のデモ状態（章ごとに少しずつ近づける）
 function quiet(dt: number) {
   sim.valve = approach(sim.valve, 0, 6, dt)
@@ -65,12 +49,21 @@ function turn(target: number, dt: number) {
   sim.rpm = approach(sim.rpm, (Math.abs(sim.omega) * 60) / (Math.PI * 2), 6, dt)
 }
 
-const C1 = curve([[0.62, 1.1, -0.12], [0.46, 0.95, -0.33], [0.31, 0.85, -0.36]])
-const C2 = curve([[0.29, 0.85, -0.33], [0.21, 0.835, -0.22], [0.13, 0.85, -0.06], [-0.1, 0.85, 0.05], [-0.17, 0.84, 0.12]])
-const C3 = curve([[-0.17, 0.84, 0.12], [-0.2, 0.875, 0.2], [-0.175, 0.865, 0.27]])
-const C4 = curve([[-0.175, 0.85, 0.26], [-0.14, 0.74, 0.19], [-0.09, 0.62, 0.14], [-0.02, 0.5, 0.11]])
-const C6 = curve([[0, 0.5, 0.11], [0, 0.36, 0.09], [0.02, 0.26, 0.08], [0.04, 0.2, 0.07], [0.08, 0.14, 0.1], [0.12, 0.1, 0.15], [0.16, 0.1, 0.23]])
-const C7 = curve([[0.16, 0.1, 0.23], [0.22, 0.11, 0.12], [0.25, 0.13, 0], [0.255, 0.28, -0.17], [0.255, 0.6, -0.24], [0.255, 0.71, -0.3], [0.25, 0.64, -0.37], [0.24, 0.5, -0.42]])
+// しずくの通り道（実際の水の流れにそう）
+const D1 = curve([[0.32, 0.68, -0.44], [0.24, 0.72, -0.4], [0.2, 0.79, -0.33], [0.2, 0.8, -0.24]])
+const D2 = curve([[0.2, 0.81, -0.22], [0.13, 0.815, -0.06], [-0.1, 0.815, 0.05], [-0.175, 0.8, 0.14]])
+const D3 = curve([[-0.175, 0.8, 0.14], [-0.175, 0.775, 0.19], [-0.175, 0.755, 0.22]])
+const D4 = curve([[-0.175, 0.75, 0.2], [-0.16, 0.73, 0.152], [-0.11, 0.7, 0.16], [-0.08, 0.6, 0.12], [-0.03, 0.42, 0.08]])
+const D6 = curve([[0, 0.3, 0.05], [0.03, 0.19, 0.06], [0.07, 0.14, 0.1], [0.12, 0.09, 0.13], [0.17, 0.08, 0.16]])
+const D7 = curve([[0.21, 0.08, 0.1], [0.25, 0.1, 0.0], [0.255, 0.25, -0.18], [0.255, 0.62, -0.25], [0.255, 0.68, -0.3], [0.25, 0.62, -0.36], [0.24, 0.45, -0.42]])
+const D9 = new THREE.CatmullRomCurve3(Array.from({ length: 24 }, (_, i) => AIR_PATH.getPointAt(0.02 + (i / 23) * 0.9)))
+
+// 少しはなれた所から、しずくを追いかけるカメラ
+const chase = (drop: THREE.CatmullRomCurve3, off: P) => ({
+  drop,
+  pos: (u: number, out: THREE.Vector3) => void drop.getPointAt(ease(u), out).add(new THREE.Vector3(...off)),
+  look: (u: number, out: THREE.Vector3) => void drop.getPointAt(ease(u), out),
+})
 const C8 = curve([[0.24, 0.5, -0.42], [0.52, 0.56, -0.28], [0.66, 0.62, 0.2], [0.42, 0.66, 0.72]])
 const C10 = curve([[-0.06, 0.5, 0.12], [0, 0.47, 0.24], [0.08, 0.56, 0.7], [0.3, 0.72, 1.7]])
 const TUB: P = [TUB_C.x, TUB_C.y, TUB_C.z]
@@ -82,9 +75,8 @@ export const CHAPTERS: Chapter[] = [
     text: 'きみは みずの つぶ。すいどうの ホースから せんたくきの せなかへ。でんきで うごく「きゅうすいべん」が カチッと ひらくよ。',
     dur: 9,
     xray: true,
-    fov: 45,
-    pos: along(C1),
-    look: fixed([0.2, 0.79, -0.24]),
+    fov: 44,
+    ...chase(D1, [0.12, 0.22, 0.42]),
     demo: (t, _d, dt) => {
       quiet(dt)
       sim.valve = approach(sim.valve, t > 3 ? 1 : 0, 6, dt)
@@ -100,9 +92,8 @@ export const CHAPTERS: Chapter[] = [
     text: 'ほそい くだの なかを びゅーん！ この みちは せんざいいれに つづいているよ。',
     dur: 8,
     xray: true,
-    fov: 55,
-    pos: along(C2),
-    look: ahead(C2, 0.18, -0.03),
+    fov: 44,
+    ...chase(D2, [0.02, 0.26, 0.42]),
     demo: (_t, _d, dt) => {
       quiet(dt)
       sim.valve = approach(sim.valve, 1, 6, dt)
@@ -116,9 +107,8 @@ export const CHAPTERS: Chapter[] = [
     text: 'せんざいいれで せんざいと まざるよ。あわの もとが いっしょに ついてくる！',
     dur: 7,
     xray: true,
-    fov: 55,
-    pos: along(C3),
-    look: fixed([-0.175, 0.745, 0.2]),
+    fov: 44,
+    ...chase(D3, [0.07, 0.16, 0.34]),
     demo: (t, d, dt) => {
       quiet(dt)
       sim.valve = approach(sim.valve, 1, 6, dt)
@@ -135,9 +125,8 @@ export const CHAPTERS: Chapter[] = [
     text: 'そとの おけ（がいそう）に みずが たまっていく。ドラムの あなから なかにも はいるよ。',
     dur: 8,
     xray: true,
-    fov: 58,
-    pos: along(C4),
-    look: mix(ahead(C4, 0.25, -0.03), fixed([0, 0.4, -0.12]), 0.45, 0.85),
+    fov: 44,
+    ...chase(D4, [0.36, 0.06, 0.22]),
     demo: (t, d, dt) => {
       quiet(dt)
       sim.valve = approach(sim.valve, 1, 6, dt)
@@ -183,9 +172,8 @@ export const CHAPTERS: Chapter[] = [
     text: 'よごれた みずは おけの そこへ。はいすいポンプの はねが くるくる まわって、みずを すいこむよ。',
     dur: 8,
     xray: true,
-    fov: 58,
-    pos: along(C6),
-    look: mix(ahead(C6, 0.15, -0.01), fixed([0.17, 0.08, 0.14]), 0.65, 0.9),
+    fov: 44,
+    ...chase(D6, [0.16, 0.12, 0.42]),
     demo: (t, d, dt) => {
       quiet(dt)
       sim.inlet = 0
@@ -203,9 +191,8 @@ export const CHAPTERS: Chapter[] = [
     text: 'ポンプに おされて ホースを のぼり、せんたくきの そとへ でていく。ばいばい よごれ！ すすぎでも この たびを もういちど くりかえすよ。',
     dur: 8,
     xray: true,
-    fov: 58,
-    pos: along(C7),
-    look: ahead(C7, 0.12, 0),
+    fov: 44,
+    ...chase(D7, [0.4, 0.1, 0.14]),
     demo: (t, _d, dt) => {
       quiet(dt)
       sim.inlet = 0
@@ -245,9 +232,8 @@ export const CHAPTERS: Chapter[] = [
     text: 'しめった かぜは ひやされて みずを おとし（じょしつ）、あたためられて ドラムに もどる。ぐるぐる まわって ふくが かわく！',
     dur: 12,
     xray: true,
-    fov: 62,
-    pos: (u, out) => void AIR_PATH.getPointAt(0.02 + ease(u) * 0.9, out),
-    look: (u, out) => void AIR_PATH.getPointAt(Math.min(0.999, 0.02 + ease(u) * 0.9 + 0.05), out),
+    fov: 44,
+    ...chase(D9, [0.1, 0.22, 0.45]),
     demo: (t, _d, dt) => {
       quiet(dt)
       sim.airflow = approach(sim.airflow, 1, 2, dt)
@@ -338,3 +324,76 @@ export function stepTour(dt: number) {
     }
   }
 }
+
+// ---- 子ども向けの案内（短いひとこと・「いまここ」地図・3Dの名札） ----
+type XY = [number, number]
+export interface ChapterGuide {
+  short: string
+  map: XY[] // 洗濯機の断面図（100×100）の上での通り道
+  focus: XY // 地図で光らせる場所
+  labels: { text: string; pos: P }[]
+}
+
+const ring = (cx: number, cy: number, r: number, from: number, to: number, n = 16): XY[] =>
+  Array.from({ length: n + 1 }, (_, i) => {
+    const a = from + ((to - from) * i) / n
+    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r] as XY
+  })
+
+export const GUIDES: ChapterGuide[] = [
+  { short: 'すいどうの みずが はいってくるよ', map: [[99, 2], [90, 8], [80, 13]], focus: [80, 13], labels: [{ text: '🚰 きゅうすいべん', pos: [0.2, 0.85, -0.24] }] },
+  { short: 'くだの なかを びゅーん！', map: [[80, 13], [60, 11], [36, 11], [26, 13]], focus: [58, 11], labels: [{ text: '💧 みずの くだ', pos: [0.02, 0.84, 0.0] }] },
+  { short: 'せんざいと いっしょに なるよ', map: [[26, 13], [23, 16], [23, 19]], focus: [23, 14], labels: [{ text: '🧴 せんざいいれ', pos: [-0.175, 0.8, 0.21] }] },
+  { short: 'おけに みずが たまっていく', map: [[23, 19], [30, 26], [40, 40], [50, 56]], focus: [50, 56], labels: [{ text: '🪣 そとの おけ', pos: [0.17, 0.45, 0.06] }] },
+  { short: 'ふくを もちあげて ストン！', map: ring(50, 56, 13, Math.PI / 2, Math.PI / 2 + Math.PI * 1.2), focus: [50, 56], labels: [{ text: '🥁 ドラムの なか', pos: [0, 0.32, -0.1] }] },
+  { short: 'ポンプが みずを すいこむ', map: [[50, 56], [50, 70], [51, 86], [62, 89], [74, 88]], focus: [74, 88], labels: [{ text: '🌀 はいすいポンプ', pos: [0.17, 0.13, 0.14] }] },
+  { short: 'ホースから そとへ でていく', map: [[74, 88], [86, 86], [88, 60], [88, 24], [93, 19], [98, 25]], focus: [88, 50], labels: [{ text: '🚀 はいすいホース', pos: [0.255, 0.45, -0.22] }] },
+  { short: 'ぐるぐる まわって みずを とばす', map: ring(50, 56, 21, -Math.PI / 4, Math.PI * 1.75, 24), focus: [50, 56], labels: [{ text: '💨 1ぷんに 1000かい！', pos: [0, 0.8, 0.12] }] },
+  {
+    short: 'あったかい かぜで かわかす',
+    map: [[50, 56], [57, 40], [62, 24], [57, 18], [44, 18], [38, 24], [42, 40], [48, 52]],
+    focus: [52, 18],
+    labels: [
+      { text: '❄️ ひやす', pos: [0.07, 0.83, -0.12] },
+      { text: '🔥 あたためる', pos: [-0.04, 0.83, -0.12] },
+    ],
+  },
+  { short: 'せんたく だいぼうけん クリア！', map: [[48, 52], [50, 56]], focus: [50, 56], labels: [] },
+]
+
+function polyAt(pts: XY[], u: number): XY {
+  if (pts.length === 1) return pts[0]
+  const segs: number[] = []
+  let total = 0
+  for (let i = 1; i < pts.length; i++) {
+    const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])
+    segs.push(d)
+    total += d
+  }
+  let target = Math.min(1, Math.max(0, u)) * total
+  for (let i = 0; i < segs.length; i++) {
+    if (target <= segs[i] || i === segs.length - 1) {
+      const k = segs[i] ? Math.min(1, target / segs[i]) : 0
+      return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * k, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * k]
+    }
+    target -= segs[i]
+  }
+  return pts[pts.length - 1]
+}
+
+// 地図の上の「しずく」の位置と、ここまで通ってきた道
+export function mapProgress(ch: number, u: number) {
+  const e = ease(Math.min(1, Math.max(0, u)))
+  const here = polyAt(GUIDES[ch].map, e)
+  const trail: XY[] = []
+  for (let i = 0; i < ch; i++) trail.push(...GUIDES[i].map)
+  const cur = GUIDES[ch].map
+  const steps = 12
+  for (let i = 0; i <= steps; i++) trail.push(polyAt(cur, (e * i) / steps))
+  return { here, trail: trail.map((p) => p.map((n) => n.toFixed(1)).join(',')).join(' ') }
+}
+
+export const fullRoute = () =>
+  GUIDES.flatMap((g) => g.map)
+    .map((p) => p.join(','))
+    .join(' ')
