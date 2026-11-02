@@ -299,3 +299,5 @@ button.title { cursor: pointer; }
   .nav { min-height: 50px; }
 }
 @media (prefers-reduced-motion: reduce) { .mm-focus, .tour-label { animation: none; } }
+
+.lab-link { display: inline-block; margin-top: 2px; padding: 10px 18px; border-radius: 999px; background: rgba(255, 255, 255, 0.85); color: #1f86e0; font-weight: 800; font-size: 15px; text-decoration: none; box-shadow: var(--shadow); }

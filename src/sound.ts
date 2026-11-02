@@ -1,3 +1,4 @@
+import { setSpeechMuted } from './speech'
 import type { SimState } from './sim'
 
 // Web Audio だけで合成する効果音（外部ファイル・外部APIは使わない）
@@ -126,13 +127,7 @@ class SoundEngine {
 
   setMuted(m: boolean) {
     this.muted = m
-    if (m) {
-      try {
-        window.speechSynthesis?.cancel()
-      } catch {
-        /* noop */
-      }
-    }
+    setSpeechMuted(m)
     if (this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.8, this.ctx.currentTime, 0.05)
   }
 

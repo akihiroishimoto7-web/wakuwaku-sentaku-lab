@@ -1,0 +1,59 @@
+/* わくわく扇風機ラボ（洗濯機ラボの styles.css に足す分） */
+html, body.fan-body, body.fan-body #root { background: #e8f6ff; }
+.fan-accent { color: #1f86e0 !important; }
+
+.fan-hud { margin: 8px auto 0; width: calc(100% - 20px); max-width: 560px; display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: 22px; padding: 10px 14px; box-shadow: var(--shadow); }
+.fan-hud.compact { padding: 6px 12px; }
+.fh-rpm { text-align: center; min-width: 76px; }
+.fh-rpm b { font-size: 28px; font-variant-numeric: tabular-nums; color: #1f86e0; }
+.fh-rpm small { display: block; font-size: 11px; font-weight: 800; color: var(--sub); margin-top: -4px; }
+.fh-wind { flex: 1; min-width: 0; }
+.fh-label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-weight: 800; font-size: 13px; color: var(--sub); }
+.fh-label em { font-style: normal; font-size: 17px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fh-bar { position: relative; height: 14px; margin-top: 6px; background: #e3f1fb; border-radius: 8px; }
+.fh-bar div { height: 100%; border-radius: 8px; background: linear-gradient(90deg, #a6e1ff, #1f86e0); transition: width 0.25s; }
+.fh-bar i { position: absolute; top: -8px; transform: translateX(-80%); font-style: normal; font-size: 18px; opacity: 0.25; transition: opacity 0.3s, transform 0.3s; }
+.fh-bar i.on { opacity: 1; transform: translateX(-80%) rotate(-15deg) scale(1.15); }
+
+.levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.lv { min-height: 70px; border-radius: 22px; background: #fff; box-shadow: 0 5px 0 #d6e4ef, var(--shadow); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-weight: 800; font-size: 17px; border: 3px solid transparent; }
+.lv b { font-size: 16px; letter-spacing: -2px; }
+.lv.on { background: var(--lv); color: #fff; border-color: #fff; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18), 0 0 0 4px var(--lv), var(--shadow); transform: translateY(3px); }
+.lv:active { transform: translateY(3px); }
+
+.fan-lanes { grid-template-columns: repeat(3, 1fr) !important; }
+.fan-lanes .tog { font-size: 10px; }
+
+.fan-splash { background: linear-gradient(180deg, rgba(232, 246, 255, 0.78), rgba(255, 246, 230, 0.85)); }
+.fan-t2 { color: #1f86e0 !important; }
+.fan-go { background: linear-gradient(180deg, #6cc6ff, #1f86e0); box-shadow: 0 5px 0 #1663a8, var(--shadow); }
+.leaves i { position: absolute; left: -40px; font-style: normal; font-size: 26px; animation: blow 8s linear infinite; }
+@keyframes blow { to { transform: translateX(120vw) translateY(30px) rotate(540deg); } }
+.lab-link { display: inline-block; margin-top: 2px; padding: 10px 18px; border-radius: 999px; background: rgba(255, 255, 255, 0.85); color: #b23a6a; font-weight: 800; font-size: 15px; text-decoration: none; box-shadow: var(--shadow); }
+
+/* 横から見た扇風機の地図 */
+.fm-room { fill: #f4faff; }
+.fm-floor { stroke: #d9b98c; stroke-width: 3; }
+.fm-outlet { fill: #ffffff; stroke: #b9c6d6; stroke-width: 0.8; }
+.fm-cord { fill: none; stroke: #c9d4e2; stroke-width: 1.6; }
+.fm-body { fill: #ffffff; stroke: #a9b8cc; stroke-width: 1; }
+.fm-pole { stroke: #a9b8cc; stroke-width: 2.4; stroke-linecap: round; }
+.fm-gear { fill: #ffd166; }
+.fm-coil { fill: #e3a35b; }
+.fm-blade { fill: #a9dcff; stroke: #5ab8ff; stroke-width: 0.8; }
+.fm-guard { fill: none; stroke: #c3cddb; stroke-width: 1; }
+.fm-stick { fill: none; stroke: #c99a5e; stroke-width: 1.4; }
+.fm-pin { fill: #ff8db3; stroke: #ffd84d; stroke-width: 1.5; }
+.fm-bell { fill: #dff4ff; stroke: #8fd0ff; stroke-width: 0.8; }
+.fm-strip { fill: #ffd84d; }
+.fm-skin { fill: #ffd2b5; stroke: #f0a98a; stroke-width: 0.8; }
+
+@media (max-width: 420px) {
+  .lv { min-height: 62px; font-size: 15px; border-radius: 18px; }
+  .fh-rpm b { font-size: 24px; }
+  .fh-label em { font-size: 15px; }
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  .lv { min-height: 48px; }
+}
+@media (prefers-reduced-motion: reduce) { .leaves i { animation: none; display: none; } }

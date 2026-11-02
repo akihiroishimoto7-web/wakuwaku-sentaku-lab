@@ -1,8 +1,12 @@
-import { sound } from './sound'
-
 // 端末の読み上げ機能（Web Speech API）。字が読めない子どものために説明を声でも伝える。
 // 使えない端末やミュート中は何もしない。
 let primed = false
+let muted = false
+
+export function setSpeechMuted(m: boolean) {
+  muted = m
+  if (m) stopSpeech()
+}
 
 function synth() {
   try {
@@ -34,7 +38,7 @@ export function primeSpeech() {
 
 export function speak(text: string, opts: { rate?: number; pitch?: number } = {}) {
   const s = synth()
-  if (!s || sound.muted) return
+  if (!s || muted) return
   try {
     s.cancel()
     const u = new SpeechSynthesisUtterance(text.replace(/（.*?）/g, '').replace(/[！？]/g, '。'))

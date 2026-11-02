@@ -42,6 +42,9 @@ export function Splash() {
             </span>
           </button>
         </div>
+        <a className="lab-link fan-link" href="./fan/">
+          🌀 せんぷうき ラボへ いく
+        </a>
         <p className="splash-note">🔊 おとと こえが でるよ</p>
       </div>
     </div>
