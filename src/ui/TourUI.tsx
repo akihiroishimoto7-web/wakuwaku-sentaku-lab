@@ -14,6 +14,7 @@ export function TourUI() {
 
   return (
     <>
+      <div id="tour-fx" className="tour-fx" aria-hidden="true" />
       <div key={tourAt} className="shrink-overlay">
         <span>みずの つぶに へんしん！</span>
       </div>

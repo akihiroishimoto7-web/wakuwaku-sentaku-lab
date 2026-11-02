@@ -290,6 +290,8 @@ function Pipe({
     const f = flow()
     tex.offset.x -= sim.dt * 2.2 * speed
     innerMat.opacity = Math.min(1, f) * 0.95
+    // たんけんで管の中を通るときは、壁をうすくして外が見えるようにする
+    outerMat.opacity = useStore.getState().tour ? 0.14 : 0.38
     if (typeof color !== 'string') innerMat.color.copy(color())
     if (innerMesh.current) innerMesh.current.visible = f > 0.01
   })
@@ -455,6 +457,7 @@ function DryerUnit() {
     ang.current += sim.airflow * sim.dt * 30
     if (fan.current) fan.current.rotation.x = ang.current
     cold.emissiveIntensity = sim.airflow * 0.6
+    housing.opacity = useStore.getState().tour ? 0.14 : 0.35
     hot.emissiveIntensity = sim.heat * 0.8
   })
   return (

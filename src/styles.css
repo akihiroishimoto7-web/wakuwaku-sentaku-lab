@@ -208,3 +208,41 @@ button:disabled { cursor: default; opacity: 0.42; filter: grayscale(0.4); }
 @media (prefers-reduced-motion: reduce) {
   .shrink-overlay span, .hint, .tag3d.tap { animation: none; }
 }
+
+/* たんけんの画面演出 */
+.tour-fx { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.4s; }
+.tour-fx[data-fx="speed"] {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0) 0 34%, rgba(170, 225, 255, 0.35) 70%),
+    repeating-conic-gradient(from 0deg at 50% 42%, rgba(255, 255, 255, 0.55) 0deg 1.2deg, rgba(255, 255, 255, 0) 1.2deg 9deg);
+  -webkit-mask: radial-gradient(circle at 50% 42%, transparent 0 30%, #000 62%);
+  mask: radial-gradient(circle at 50% 42%, transparent 0 30%, #000 62%);
+  animation: rush 0.35s linear infinite;
+}
+.tour-fx[data-fx="cold"] { background: radial-gradient(circle at 50% 45%, rgba(120, 200, 255, 0) 30%, rgba(90, 180, 255, 0.45) 100%); }
+.tour-fx[data-fx="hot"] { background: radial-gradient(circle at 50% 45%, rgba(255, 140, 90, 0) 30%, rgba(255, 110, 70, 0.45) 100%); }
+@keyframes rush { from { transform: scale(1); } to { transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .tour-fx[data-fx="speed"] { animation: none; } }
+
+/* ---- はじめの画面 ---- */
+button.title { cursor: pointer; }
+.splash { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: linear-gradient(180deg, rgba(255, 243, 232, 0.72), rgba(222, 242, 255, 0.82)); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); pointer-events: auto; overflow: hidden; animation: fadein 0.4s ease; }
+@keyframes fadein { from { opacity: 0; } }
+.bubbles i { position: absolute; bottom: -60px; border-radius: 50%; background: radial-gradient(circle at 32% 30%, #fff 0 18%, rgba(255, 255, 255, 0.15) 40%, rgba(160, 220, 255, 0.35) 70%, rgba(255, 170, 220, 0.45) 100%); box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.8); animation: rise 7s linear infinite; }
+@keyframes rise { to { transform: translateY(-115vh) translateX(30px); } }
+.splash-card { position: relative; width: min(100%, 440px); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.splash-kicker { margin: 0; font-weight: 800; font-size: 15px; color: #7a6aa8; letter-spacing: 0.08em; }
+.splash-title { margin: 0; display: flex; flex-direction: column; align-items: center; line-height: 1.05; font-weight: 800; color: #3a3350; text-shadow: 0 4px 0 #fff, 0 8px 20px rgba(80, 60, 120, 0.18); }
+.splash-title span { font-size: clamp(30px, 9vw, 44px); }
+.splash-title .t2 { font-size: clamp(44px, 14vw, 66px); color: #ff5f93; letter-spacing: 0.02em; }
+.splash-title .t3 { font-size: clamp(30px, 9vw, 44px); color: #2aa7ef; }
+.splash-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.go { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border-radius: 24px; padding: 12px 16px; font-size: 21px; font-weight: 800; color: #fff; transition: transform 0.08s; }
+.go b { font-size: 34px; width: 52px; height: 52px; flex: 0 0 52px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.28); border-radius: 18px; }
+.go small { display: block; font-size: 12.5px; font-weight: 700; opacity: 0.92; margin-top: 2px; }
+.go:active { transform: translateY(3px); }
+.go.wash { background: linear-gradient(180deg, #ff8db3, #ff5f93); box-shadow: 0 5px 0 #d9407a, var(--shadow); }
+.go.tour { background: linear-gradient(180deg, #ffd84d, #ffb800); box-shadow: 0 5px 0 #d18f00, var(--shadow); color: #4a3200; }
+.go.exp { background: linear-gradient(180deg, #5fd0ff, #2aa7ef); box-shadow: 0 5px 0 #1b80c0, var(--shadow); }
+.splash-note { margin: 0; font-size: 13px; font-weight: 700; color: #7b7392; }
+@media (prefers-reduced-motion: reduce) { .bubbles i { animation: none; display: none; } }

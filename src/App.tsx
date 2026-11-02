@@ -13,6 +13,7 @@ import { MicroWorld } from './scene/MicroWorld'
 import { Room } from './scene/Room'
 import { SimDriver } from './scene/SimDriver'
 import { sound } from './sound'
+import { primeSpeech } from './speech'
 import { useStore } from './store'
 import { UI } from './ui/UI'
 import { XrayBackdrop } from './scene/XrayDome'
@@ -27,7 +28,10 @@ export function App() {
 
   // 音は最初のタッチで有効化（iOS 対策）。タブが隠れたら止めて発熱・電池を抑える
   useEffect(() => {
-    const unlock = () => sound.unlock()
+    const unlock = () => {
+      sound.unlock()
+      primeSpeech()
+    }
     const vis = () => (document.hidden ? sound.suspend() : sound.resume())
     window.addEventListener('pointerdown', unlock, { capture: true })
     document.addEventListener('visibilitychange', vis)

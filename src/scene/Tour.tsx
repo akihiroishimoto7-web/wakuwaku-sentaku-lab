@@ -4,8 +4,10 @@ import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { addDemoBody, demoBodies } from '../clothSim'
 import { CLOTH_IDS, type ClothId } from '../data'
+import { sound } from '../sound'
+import { speak, stopSpeech } from '../speech'
 import { useStore } from '../store'
-import { CHAPTERS, tour } from '../tour'
+import { airPhase, CHAPTERS, tour } from '../tour'
 import { ClothItem } from './Clothes'
 
 // たんけんツアー：カメラを通り道にそって動かし、案内役の「しずくん」が先を進む
@@ -15,23 +17,6 @@ export function Tour() {
 }
 
 const DEMO: ClothId[] = ['shirt', 'towel', 'teddy', 'socks']
-
-function speak(text: string) {
-  try {
-    const synth = window.speechSynthesis
-    if (!synth || useStore.getState().muted) return
-    synth.cancel()
-    const u = new SpeechSynthesisUtterance(text.replace(/（.*?）/g, ''))
-    u.lang = 'ja-JP'
-    u.rate = 1.0
-    u.pitch = 1.15
-    const ja = synth.getVoices().find((v) => v.lang.startsWith('ja'))
-    if (ja) u.voice = ja
-    synth.speak(u)
-  } catch {
-    // 読み上げが使えない端末では文字だけで進める
-  }
-}
 
 function TourInner() {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
@@ -74,22 +59,15 @@ function TourInner() {
       camera.updateProjectionMatrix()
       demoBodies.clear()
       if (controls) controls.enabled = true
-      try {
-        window.speechSynthesis?.cancel()
-      } catch {
-        /* noop */
-      }
+      stopSpeech()
     }
   }, [camera, gl, controls])
 
   useEffect(() => {
-    if (muted)
-      try {
-        window.speechSynthesis?.cancel()
-      } catch {
-        /* noop */
-      }
+    if (muted) stopSpeech()
   }, [muted])
+  const since = useRef(0)
+  const fx = useRef<HTMLElement | null>(null)
 
   useFrame((state, delta) => {
     if (!controls) return
@@ -99,9 +77,12 @@ function TourInner() {
       v.fromPos.copy(camera.position)
       v.fromLook.copy(controls.target)
       blend.current = 0
+      since.current = 0
       useStore.setState({ xray: c.xray })
+      sound.chime()
       speak(`${c.title}。${c.text}`)
     }
+    since.current += Math.min(delta, 0.05)
     const real = Math.min(delta, 0.05)
     blend.current = Math.min(1, blend.current + real / 1.1)
     const k = blend.current * blend.current * (3 - 2 * blend.current)
@@ -130,11 +111,28 @@ function TourInner() {
         .addScaledVector(v.fwd, 0.1)
         .addScaledVector(v.right, -0.024 * aspect + Math.sin(t * 1.3) * 0.002)
         .addScaledVector(v.up, -0.006 + Math.sin(t * 3) * 0.002)
-      guide.current.scale.setScalar(0.45)
+      // 章が変わると、ぴょんと はねる
+      const b = since.current
+      guide.current.scale.setScalar(0.45 * (1 + 0.4 * Math.sin(b * Math.PI * 3) * Math.exp(-b * 3.5)))
       guide.current.quaternion.copy(camera.quaternion)
       guide.current.rotateZ(Math.sin(t * 2) * 0.15)
     }
     if (lamp.current) lamp.current.position.copy(camera.position)
+
+    // 画面の演出：スピード線、乾燥のときの冷たい／あつい色
+    if (!fx.current) fx.current = document.getElementById('tour-fx')
+    const el = fx.current
+    if (el) {
+      let kind = c.fx ?? ''
+      let o = kind ? 0.75 * Math.min(1, since.current * 2) : 0
+      if (tour.ch === CHAPTERS.length - 2) {
+        const a = airPhase(u)
+        kind = a
+        o = a ? 0.8 : 0
+      }
+      if (el.dataset.fx !== kind) el.dataset.fx = kind
+      el.style.opacity = String(o)
+    }
   }, -0.5)
 
   return (

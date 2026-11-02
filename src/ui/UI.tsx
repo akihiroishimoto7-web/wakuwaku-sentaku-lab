@@ -6,6 +6,8 @@ import { COURSES, COURSE_IDS, PHASES, SPIN_RPM, courseDuration } from '../sim'
 import { useStore, type Step } from '../store'
 import { ClothIcon } from './ClothIcon'
 import { TourUI } from './TourUI'
+import { Splash } from './Splash'
+import { speak } from '../speech'
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
@@ -18,6 +20,7 @@ export function UI() {
       {mode === 'micro' && <MicroUI />}
       {mode === 'experiment' && <ExperimentUI />}
       <ZoomOverlay />
+      <Splash />
     </div>
   )
 }
@@ -30,12 +33,12 @@ function TopBar() {
   const step = useStore((s) => s.step)
   return (
     <header className="topbar">
-      <div className="title">
+      <button className="title" onClick={() => useStore.getState().showSplash()} aria-label="はじめの がめんへ">
         <span className="logo">🫧</span>
         <span>
           わくわく<b>せんたくき</b>ラボ
         </span>
-      </div>
+      </button>
       <div className="top-actions">
         {mode === 'wash' && (
           <button className="pill" onClick={() => setMode('experiment')} disabled={step === 'running'}>
@@ -57,6 +60,15 @@ function TopBar() {
 
 // ---------------- せんたく ----------------
 const STEPS = ['あける', 'えらぶ', 'いれる', 'せんざい', 'コース', 'スタート', 'とりだす']
+
+const STEP_VOICE: Partial<Record<Step, string>> = {
+  intro: 'とびらを あけて、せんたくを はじめよう',
+  choose: 'ふくを えらんで、いれるを おしてね',
+  detergent: 'せんざいを いれよう',
+  course: 'コースを えらんで、スタート',
+  done: 'おわったよ。ふくを とりだそう',
+  finished: 'ぴかぴかに なったね',
+}
 
 function stepIndex(step: Step, inDrum: number, course: boolean) {
   switch (step) {
@@ -85,11 +97,16 @@ function WashUI() {
   const inDrum = Object.values(items).filter((v) => v === 'drum').length
   const idx = stepIndex(step, inDrum, !!course)
   const tour = useStore((s) => s.tour)
+  const xray = useStore((s) => s.xray)
+  const splash = useStore((s) => s.splash)
+  useEffect(() => {
+    if (!tour && !splash && STEP_VOICE[step]) speak(STEP_VOICE[step])
+  }, [step, tour, splash])
   if (tour) return <TourUI />
 
   return (
     <>
-      {step !== 'running' && step !== 'done' && step !== 'finished' && (
+      {!xray && step !== 'running' && step !== 'done' && step !== 'finished' && (
         <ol className="steps" aria-label="せんたくの てじゅん">
           {STEPS.map((s, i) => (
             <li key={s} className={i < idx ? 'done' : i === idx ? 'now' : ''}>
@@ -270,6 +287,10 @@ function RunHud() {
   const slow = useStore((s) => s.slow)
   const step = useStore((s) => s.step)
   const xray = useStore((s) => s.xray)
+  const phaseLabel = hud.phase ? PHASES[hud.phase].label : ''
+  useEffect(() => {
+    if (phaseLabel) speak(`${phaseLabel}！`)
+  }, [phaseLabel])
   if (!course) return null
   const phases = COURSES[course].phases
   const total = courseDuration(course)
@@ -349,6 +370,9 @@ function PartCard() {
   const focus = useStore((s) => s.focus)!
   const setFocus = useStore((s) => s.setFocus)
   const p = PARTS[focus]
+  useEffect(() => {
+    speak(`${p.name}。${p.desc}`)
+  }, [p])
   return (
     <div className="partcard" key={focus}>
       <div className="pc-head">
@@ -375,6 +399,9 @@ function MicroUI() {
   const steps = microSteps(det)
   const cur = steps[idx]
   const last = idx === steps.length - 1
+  useEffect(() => {
+    speak(`${cur.title}。${cur.text}`)
+  }, [cur])
   return (
     <>
       <div className="micro-top">

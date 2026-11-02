@@ -65,6 +65,7 @@ interface State {
   tourPaused: boolean
   tourDone: boolean
   tourAt: number
+  splash: boolean
 
   openDoor: () => void
   closeDoor: () => void
@@ -93,6 +94,8 @@ interface State {
   setLane: (i: number, lane: Partial<ExpLane>) => void
   runExperiment: () => void
   startTour: () => void
+  showSplash: () => void
+  closeSplash: (go: 'wash' | 'tour' | 'experiment') => void
   exitTour: () => void
   setTourChapter: (ch: number) => void
   gotoChapter: (ch: number) => void
@@ -139,6 +142,7 @@ export const useStore = create<State>((set, get) => ({
   tourPaused: false,
   tourDone: false,
   tourAt: 0,
+  splash: true,
 
   openDoor: () => {
     const { step } = get()
@@ -298,6 +302,22 @@ export const useStore = create<State>((set, get) => ({
     const lanes = get().expLanes.slice()
     lanes[i] = { ...lanes[i], ...lane }
     set({ expLanes: lanes, expState: 'idle', expProgress: [0, 0, 0, 0] })
+  },
+  showSplash: () => {
+    sound.click()
+    set({ splash: true })
+  },
+  closeSplash: (go) => {
+    sound.start()
+    set({ splash: false })
+    const st = get()
+    if (go === 'experiment') {
+      if (st.mode !== 'experiment') st.setMode('experiment')
+      return
+    }
+    if (st.mode !== 'wash') st.setMode('wash')
+    if (go === 'tour') get().startTour()
+    else if (get().tour) get().exitTour()
   },
   startTour: () => {
     const { mode, zooming, tour } = get()

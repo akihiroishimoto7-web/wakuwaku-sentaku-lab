@@ -16,6 +16,7 @@ export interface Chapter {
   pos: (u: number, out: THREE.Vector3) => void
   look: (u: number, out: THREE.Vector3) => void
   demo: (t: number, dur: number, dt: number) => void
+  fx?: 'speed'
 }
 
 type P = [number, number, number]
@@ -70,7 +71,7 @@ const C3 = curve([[-0.17, 0.84, 0.12], [-0.2, 0.875, 0.2], [-0.175, 0.865, 0.27]
 const C4 = curve([[-0.175, 0.85, 0.26], [-0.14, 0.74, 0.19], [-0.09, 0.62, 0.14], [-0.02, 0.5, 0.11]])
 const C6 = curve([[0, 0.5, 0.11], [0, 0.36, 0.09], [0.02, 0.26, 0.08], [0.04, 0.2, 0.07], [0.08, 0.14, 0.1], [0.12, 0.1, 0.15], [0.16, 0.1, 0.23]])
 const C7 = curve([[0.16, 0.1, 0.23], [0.22, 0.11, 0.12], [0.25, 0.13, 0], [0.255, 0.28, -0.17], [0.255, 0.6, -0.24], [0.255, 0.71, -0.3], [0.25, 0.64, -0.37], [0.24, 0.5, -0.42]])
-const C8 = curve([[0, 0.48, 0.12], [0.1, 0.55, 0.36], [0.42, 0.68, 0.72]])
+const C8 = curve([[0.24, 0.5, -0.42], [0.52, 0.56, -0.28], [0.66, 0.62, 0.2], [0.42, 0.66, 0.72]])
 const C10 = curve([[-0.06, 0.5, 0.12], [0, 0.47, 0.24], [0.08, 0.56, 0.7], [0.3, 0.72, 1.7]])
 const TUB: P = [TUB_C.x, TUB_C.y, TUB_C.z]
 
@@ -95,6 +96,7 @@ export const CHAPTERS: Chapter[] = [
   {
     icon: '🛝',
     title: 'みずの みちを すすめ',
+    fx: 'speed',
     text: 'ほそい くだの なかを びゅーん！ この みちは せんざいいれに つづいているよ。',
     dur: 8,
     xray: true,
@@ -129,6 +131,7 @@ export const CHAPTERS: Chapter[] = [
   {
     icon: '🌊',
     title: 'おけの なかへ ザブーン',
+    fx: 'speed',
     text: 'そとの おけ（がいそう）に みずが たまっていく。ドラムの あなから なかにも はいるよ。',
     dur: 8,
     xray: true,
@@ -176,6 +179,7 @@ export const CHAPTERS: Chapter[] = [
   {
     icon: '⬇️',
     title: 'そこから はいすいへ',
+    fx: 'speed',
     text: 'よごれた みずは おけの そこへ。はいすいポンプの はねが くるくる まわって、みずを すいこむよ。',
     dur: 8,
     xray: true,
@@ -195,6 +199,7 @@ export const CHAPTERS: Chapter[] = [
   {
     icon: '🚀',
     title: 'ホースを のぼって そとへ',
+    fx: 'speed',
     text: 'ポンプに おされて ホースを のぼり、せんたくきの そとへ でていく。ばいばい よごれ！ すすぎでも この たびを もういちど くりかえすよ。',
     dur: 8,
     xray: true,
@@ -214,6 +219,7 @@ export const CHAPTERS: Chapter[] = [
   {
     icon: '💨',
     title: 'だっすい！ びゅんびゅん',
+    fx: 'speed',
     text: 'ドラムが 1ぷんに 1000かいも まわる！ ふくの みずが ちいさな あなから そとへ とびだしていくよ。',
     dur: 10,
     xray: true,
@@ -267,6 +273,14 @@ export const CHAPTERS: Chapter[] = [
     },
   },
 ]
+
+// 乾燥の章で、いま風が「ひやされている／あたためられている」ところか
+export function airPhase(u: number): '' | 'cold' | 'hot' {
+  const p = 0.02 + ease(u) * 0.9
+  if (p > 0.3 && p < 0.45) return 'cold'
+  if (p >= 0.45 && p < 0.72) return 'hot'
+  return ''
+}
 
 // ---- 進行 ----
 const KEYS = [
