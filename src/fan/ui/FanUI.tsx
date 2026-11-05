@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { speak } from '../../speech'
+import { StampToast, ZukanBook, ZukanButton } from '../../ui/Zukan'
+import { fanSound } from '../sound'
 import { FAN_PARTS, FAN_PART_IDS, LEVELS, type Level } from '../data'
 import { laneModel, PITCH_NAME } from '../scene/Experiment'
 import { useFan, type Pitch } from '../store'
@@ -13,7 +15,9 @@ export function FanUI() {
       {!tour && <TopBar />}
       {mode === 'play' && (tour ? <TourUI /> : <PlayUI />)}
       {mode === 'experiment' && <ExperimentUI />}
+      <StampToast onShow={() => fanSound.sparkle()} />
       <Splash />
+      <ZukanBook lab="fan" />
     </div>
   )
 }
@@ -382,9 +386,12 @@ function Splash() {
             </span>
           </button>
         </div>
-        <a className="lab-link" href="../">
-          🫧 せんたくき ラボへ いく
-        </a>
+        <div className="splash-links">
+          <ZukanButton />
+          <a className="lab-link" href="../">
+            🫧 せんたくき ラボへ
+          </a>
+        </div>
         <p className="splash-note">🔊 おとと こえが でるよ</p>
       </div>
     </div>

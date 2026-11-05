@@ -62,7 +62,7 @@ const D4 = new THREE.CatmullRomCurve3(Array.from({ length: 25 }, (_, i) => {
 const D5 = curve([[0.06, 0.98, -0.5], [0.04, 0.88, -0.3], [0.02, 0.84, -0.1], [0.04, 0.83, 0.02]])
 const D6 = curve([[0.06, 0.84, 0.04], [0.1, 0.86, 0.28], [0.14, 0.85, 0.6], [0.2, 0.83, 0.95]])
 const D8 = curve([[0.12, 0.84, 0.4], [0.44, 0.82, 0.7], [0.2, 0.98, 0.95], [-0.2, 1.08, 0.9], [-0.42, 1.08, 0.74]])
-const D9 = curve([[-0.42, 1.05, 0.8], [-0.2, 0.96, 1.0], [0.0, 0.88, 1.13], [0.02, 0.86, 1.18]])
+const D9 = curve([[-0.42, 1.06, 0.76], [-0.18, 0.96, 0.8], [-0.02, 0.9, 0.94], [0.02, 0.9, 1.1]])
 const C10 = curve([[0.12, 0.92, 0.85], [0.3, 1.0, 1.4], [0.55, 1.15, 2.3]])
 
 export const FAN_CHAPTERS: FanChapter[] = [
@@ -239,7 +239,10 @@ export const FAN_CHAPTERS: FanChapter[] = [
     xray: false,
     fov: 44,
     spark: false,
-    ...chase(D9, [0.22, 0.12, -0.5]),
+    // うでを ずっと がめんに いれたまま、かぜの つぶが とんでくるのを まつ
+    drop: D9,
+    pos: (u, out) => void out.set(0.17 - 0.02 * u, 1.0, 1.66 - 0.05 * u),
+    look: (_u, out) => void out.set(0.05, 0.86, 1.02),
     demo: (_t, _d, dt) => {
       faceFront(dt)
       fan.level = 3
@@ -247,7 +250,7 @@ export const FAN_CHAPTERS: FanChapter[] = [
     },
     map: [[55, 24], [75, 32], [86, 40]],
     focus: [88, 40],
-    labels: [{ text: '✋ はだ（おおきく みた イメージ）', pos: [0.02, 1.02, 1.2] }],
+    labels: [{ text: '✋ きみの うで（イメージ）', pos: [0.085, 0.95, 1.28] }],
   },
   {
     icon: '🏁',

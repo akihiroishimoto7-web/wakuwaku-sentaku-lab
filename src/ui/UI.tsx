@@ -8,6 +8,8 @@ import { ClothIcon } from './ClothIcon'
 import { TourUI } from './TourUI'
 import { Splash } from './Splash'
 import { speak } from '../speech'
+import { sound } from '../sound'
+import { StampToast, ZukanBook } from './Zukan'
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
@@ -20,7 +22,9 @@ export function UI() {
       {mode === 'micro' && <MicroUI />}
       {mode === 'experiment' && <ExperimentUI />}
       <ZoomOverlay />
+      <StampToast onShow={() => sound.sparkle()} />
       <Splash />
+      <ZukanBook lab="wash" />
     </div>
   )
 }

@@ -107,5 +107,7 @@ export const FAN_PART_IDS = Object.keys(FAN_PARTS) as FanPartId[]
 // ---- まわりの小物の位置 ----
 export const PINWHEEL_POS = new THREE.Vector3(0.5, 0.8, 0.78)
 export const CHIME_POS = new THREE.Vector3(-0.52, 1.1, 0.72)
-export const SKIN_POS = new THREE.Vector3(0.02, 0.84, 1.2)
+// たんけんの「はだ」の章で かぜを うける うで（ひじ → てくび）
+export const ARM_ELBOW = new THREE.Vector3(0.11, 0.77, 1.56)
+export const ARM_WRIST = new THREE.Vector3(0.025, 0.85, 1.24)
 export const OUTLET_POS = new THREE.Vector3(-0.72, 0.26, -0.69)

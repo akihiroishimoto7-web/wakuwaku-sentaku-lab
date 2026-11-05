@@ -1,4 +1,5 @@
 import { useStore } from '../store'
+import { ZukanButton } from './Zukan'
 
 // はじめの画面：あそびかたを3つから選ぶ（最初のタップで音と読み上げも有効になる）
 export function Splash() {
@@ -42,9 +43,12 @@ export function Splash() {
             </span>
           </button>
         </div>
-        <a className="lab-link fan-link" href="./fan/">
-          🌀 せんぷうき ラボへ いく
-        </a>
+        <div className="splash-links">
+          <ZukanButton />
+          <a className="lab-link fan-link" href="./fan/">
+            🌀 せんぷうき ラボへ
+          </a>
+        </div>
         <p className="splash-note">🔊 おとと こえが でるよ</p>
       </div>
     </div>

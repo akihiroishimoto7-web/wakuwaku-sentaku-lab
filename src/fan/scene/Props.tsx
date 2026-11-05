@@ -1,10 +1,11 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { CHIME_POS, PINWHEEL_POS, SKIN_POS } from '../data'
+import { ARM_ELBOW, ARM_WRIST, CHIME_POS, PINWHEEL_POS } from '../data'
 import { fan, windAt } from '../sim'
 import { fanSound } from '../sound'
 import { useFan } from '../store'
+import { award } from '../../stamps'
 
 // 風に反応する小物：かざぐるま・風鈴・（たんけん用の）はだ
 export function Props() {
@@ -126,7 +127,9 @@ function WindChime() {
     cooldown.current -= dt
     if (Math.abs(vel.current) > 0.25 && cooldown.current <= 0 && Math.random() < 0.08 + w * 0.2) {
       cooldown.current = 0.5 + Math.random() * 0.8
-      if (!useFan.getState().tour || w > 0.05) fanSound.chime(Math.abs(vel.current))
+      const inTour = useFan.getState().tour
+      if (!inTour || w > 0.05) fanSound.chime(Math.abs(vel.current))
+      if (!inTour && w > 0.05) award('fan_chime')
     }
   })
   return (
@@ -180,35 +183,57 @@ function WindChime() {
   )
 }
 
-// たんけんの「はだで すずしい」章だけに出る、大きく見たはだ（模式図）
+// たんけんの「はだで すずしい」章だけに出る「きみの うで」（イメージ）
+// あせの つぶが かぜで かわいて ゆげに なり、うでの ほてりが すっと ひいていく
 export const skinState = { show: 0, cool: 0 }
+const ARM_R = 0.034
 function Skin() {
   const group = useRef<THREE.Group>(null)
   const drops = useRef<THREE.InstancedMesh>(null)
   const steam = useRef<THREE.InstancedMesh>(null)
-  const skinMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffc9a8', roughness: 0.6, emissive: '#ff5a3c', emissiveIntensity: 0.2 }), [])
-  const geo = useMemo(() => {
-    const g = new THREE.PlaneGeometry(0.32, 0.2, 40, 24)
-    const p = g.attributes.position as THREE.BufferAttribute
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i)
-      const y = p.getY(i)
-      p.setZ(i, 0.006 * Math.sin(x * 60) * Math.sin(y * 70) + 0.004 * Math.sin(x * 23 + y * 31))
-    }
-    g.computeVertexNormals()
-    return g
+  const sparks = useRef<THREE.InstancedMesh>(null)
+  // ひじ → てくびを z じくに した ローカルの むき
+  const frame = useMemo(() => {
+    const z = ARM_WRIST.clone().sub(ARM_ELBOW)
+    const len = z.length()
+    z.normalize()
+    const x = new THREE.Vector3(0, 1, 0).cross(z).normalize()
+    const y = z.clone().cross(x)
+    const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z))
+    return { q, len }
   }, [])
-  const dropGeo = useMemo(() => new THREE.SphereGeometry(0.016, 12, 8), [])
-  const dropMat = useMemo(() => new THREE.MeshPhysicalMaterial({ color: '#bfe8ff', roughness: 0.02, transparent: true, opacity: 0.85, clearcoat: 1 }), [])
-  const steamMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.45, depthWrite: false }), [])
+  const skinMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffcfb0', roughness: 0.55, emissive: '#ff5a3c', emissiveIntensity: 0.3 }), [])
+  const sleeveMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#7cc8ff', roughness: 0.8 }), [])
+  const armGeo = useMemo(() => new THREE.CapsuleGeometry(ARM_R, frame.len, 6, 20).rotateX(Math.PI / 2), [frame.len])
+  const palmGeo = useMemo(() => new THREE.SphereGeometry(0.04, 20, 14), [])
+  const fingerGeo = useMemo(() => new THREE.CapsuleGeometry(0.0095, 0.034, 4, 10).rotateX(Math.PI / 2), [])
+  const sleeveGeo = useMemo(() => new THREE.CylinderGeometry(ARM_R * 1.45, ARM_R * 1.6, 0.09, 24, 1, true).rotateX(Math.PI / 2), [])
+  const dropGeo = useMemo(() => new THREE.SphereGeometry(0.0075, 12, 8), [])
+  const dropMat = useMemo(() => new THREE.MeshPhysicalMaterial({ color: '#bfe8ff', roughness: 0.02, transparent: true, opacity: 0.9, clearcoat: 1 }), [])
+  const steamMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55, depthWrite: false }), [])
+  const sparkGeo = useMemo(() => new THREE.OctahedronGeometry(0.006, 0), [])
+  const sparkMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#7fdcff', transparent: true, opacity: 0.9, depthWrite: false }), [])
   useEffect(
     () => () => {
-      ;[skinMat, geo, dropGeo, dropMat, steamMat].forEach((x) => x.dispose())
+      ;[skinMat, sleeveMat, armGeo, palmGeo, fingerGeo, sleeveGeo, dropGeo, dropMat, steamMat, sparkGeo, sparkMat].forEach((x) => x.dispose())
     },
-    [skinMat, geo, dropGeo, dropMat, steamMat],
+    [skinMat, sleeveMat, armGeo, palmGeo, fingerGeo, sleeveGeo, dropGeo, dropMat, steamMat, sparkGeo, sparkMat],
   )
-  const seeds = useMemo(() => Array.from({ length: 14 }, (_, i) => [((i * 0.37) % 1) * 0.26 - 0.13, ((i * 0.61) % 1) * 0.14 - 0.07, 0.6 + ((i * 0.43) % 1) * 0.6]), [])
+  // あせの つぶ：うでの うえがわと てのこうに ならべる [x, y, z, かわく はやさ]
+  const seeds = useMemo(() => {
+    const out: [number, number, number, number][] = []
+    for (let i = 0; i < 16; i++) {
+      const onHand = i >= 12
+      const a = ((i * 0.37) % 1) * 1.6 - 0.8
+      const z = onHand ? 0.02 + ((i * 0.29) % 1) * 0.05 : -frame.len + 0.05 + ((i * 0.61) % 1) * (frame.len - 0.06)
+      const r = onHand ? 0.019 : ARM_R
+      out.push([Math.sin(a) * r * (onHand ? 1.6 : 1), Math.cos(a) * r, z, 0.7 + ((i * 0.43) % 1) * 0.6])
+    }
+    return out
+  }, [frame.len])
   const m4 = useMemo(() => new THREE.Matrix4(), [])
+  const warm = useMemo(() => new THREE.Color('#ffcfb0'), [])
+  const coolC = useMemo(() => new THREE.Color('#ffe6d8'), [])
   useFrame((state) => {
     const g = group.current
     if (!g) return
@@ -216,28 +241,47 @@ function Skin() {
     if (!g.visible) return
     g.scale.setScalar(Math.max(0.001, skinState.show))
     const c = skinState.cool
-    skinMat.emissiveIntensity = 0.25 * (1 - c)
-    skinMat.color.set('#ffc9a8').lerp(new THREE.Color('#ffe2d0'), c)
+    skinMat.emissiveIntensity = 0.32 * (1 - c)
+    skinMat.color.copy(warm).lerp(coolC, c)
     const t = state.clock.elapsedTime
-    if (drops.current && steam.current) {
+    if (drops.current && steam.current && sparks.current) {
       seeds.forEach((sd, i) => {
-        const left = Math.max(0, 1 - c * sd[2] * 1.3)
-        m4.makeScale(left, left * 0.7, left).setPosition(sd[0], sd[1], 0.008)
+        const left = Math.max(0, 1 - c * sd[3] * 1.35)
+        m4.makeScale(left, left * 0.75, left).setPosition(sd[0], sd[1] + 0.003, sd[2])
         drops.current!.setMatrixAt(i, m4)
-        const k = ((t * 0.6 + i * 0.13) % 1)
-        const sc = c > 0.05 ? (1 - k) * 0.9 * Math.min(1, c * 2) : 0
-        m4.makeScale(sc, sc, sc).setPosition(sd[0] + Math.sin(t + i) * 0.01, sd[1] + 0.02 + k * 0.12, 0.03 + k * 0.05)
+        // ゆげ：かわいた ぶんだけ うえへ のぼって きえる（かぜに ながされて ひじの ほうへ）
+        const k = (t * 0.7 + i * 0.13) % 1
+        const sc = c > 0.04 && left < 0.98 ? (1 - k) * 0.95 * Math.min(1, c * 2.5) : 0
+        m4.makeScale(sc, sc, sc).setPosition(sd[0] + Math.sin(t * 2 + i) * 0.006, sd[1] + 0.012 + k * 0.07, sd[2] - k * 0.05)
         steam.current!.setMatrixAt(i, m4)
+        // すずしい きらきら
+        const a = i * 2.4 + t * 0.8
+        const tw = Math.max(0, Math.sin(t * 5 + i * 1.7)) * Math.min(1, Math.max(0, c * 1.6 - 0.2))
+        m4.makeScale(tw, tw, tw).setPosition(Math.cos(a) * 0.06, 0.035 + Math.sin(a * 1.3) * 0.025, sd[2] * 0.8)
+        sparks.current!.setMatrixAt(i, m4)
       })
       drops.current.instanceMatrix.needsUpdate = true
       steam.current.instanceMatrix.needsUpdate = true
+      sparks.current.instanceMatrix.needsUpdate = true
     }
   })
   return (
-    <group ref={group} position={SKIN_POS} rotation-y={Math.PI} visible={false}>
-      <mesh geometry={geo} material={skinMat} />
-      <instancedMesh ref={drops} args={[dropGeo, dropMat, 14]} frustumCulled={false} />
-      <instancedMesh ref={steam} args={[dropGeo, steamMat, 14]} frustumCulled={false} />
+    <group ref={group} position={ARM_WRIST} quaternion={frame.q} visible={false}>
+      {/* うで（ひじ → てくび） */}
+      <mesh geometry={armGeo} material={skinMat} position-z={-frame.len / 2} />
+      {/* そで */}
+      <mesh geometry={sleeveGeo} material={sleeveMat} position-z={-frame.len + 0.02} />
+      {/* て：てのひら・ゆび・おやゆび */}
+      <group position={[0, -0.004, 0.035]} rotation-x={0.12}>
+        <mesh geometry={palmGeo} material={skinMat} scale={[0.95, 0.42, 1.05]} />
+        {[-0.024, -0.008, 0.008, 0.024].map((x, i) => (
+          <mesh key={x} geometry={fingerGeo} material={skinMat} position={[x, -0.002, 0.052 + (i === 1 || i === 2 ? 0.006 : 0)]} />
+        ))}
+        <mesh geometry={fingerGeo} material={skinMat} position={[-0.04, -0.004, 0.012]} rotation-y={-0.9} />
+      </group>
+      <instancedMesh ref={drops} args={[dropGeo, dropMat, 16]} frustumCulled={false} />
+      <instancedMesh ref={steam} args={[dropGeo, steamMat, 16]} frustumCulled={false} />
+      <instancedMesh ref={sparks} args={[sparkGeo, sparkMat, 16]} frustumCulled={false} />
     </group>
   )
 }

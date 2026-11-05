@@ -1,0 +1,16 @@
+{
+  "name": "わくわく扇風機ラボ",
+  "short_name": "せんぷうきラボ",
+  "description": "扇風機のモーターや首ふりのしくみ、風が生まれるひみつを学べる子ども向け3Dラボ",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "../",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e8f6ff",
+  "theme_color": "#38b4ff",
+  "icons": [
+    { "src": "../icons/fan-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "../icons/fan-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

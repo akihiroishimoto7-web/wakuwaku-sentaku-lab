@@ -11,7 +11,7 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { margin: 0; height: 100%; overflow: hidden; background: #fbefe2; }
-body { font-family: var(--font); color: var(--ink); -webkit-font-smoothing: antialiased; overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
+body { font-family: var(--font); color: var(--ink); -webkit-font-smoothing: antialiased; overscroll-behavior: none; user-select: none; -webkit-user-select: none; word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
 button { font-family: inherit; color: inherit; cursor: pointer; border: none; touch-action: manipulation; }
 button:disabled { cursor: default; opacity: 0.42; filter: grayscale(0.4); }
 
@@ -26,11 +26,13 @@ button:disabled { cursor: default; opacity: 0.42; filter: grayscale(0.4); }
 .title b { color: var(--pink); }
 .logo { font-size: 18px; }
 .top-actions { display: flex; gap: 6px; }
-.pill { background: var(--card); box-shadow: var(--shadow); border-radius: 999px; padding: 8px 14px; font-weight: 800; font-size: 15px; min-height: 40px; }
+.pill { background: var(--card); box-shadow: var(--shadow); border-radius: 999px; padding: 8px 14px; font-weight: 800; font-size: 15px; min-height: 40px; white-space: nowrap; }
+@media (max-width: 374px) { .topbar .pill:not(.icon) { padding: 8px 10px; font-size: 14px; } .title { padding: 6px 10px; font-size: 14px; } }
 .pill.icon { width: 44px; padding: 0; font-size: 20px; }
 
 .steps { list-style: none; display: flex; justify-content: center; gap: 4px; margin: 6px auto 0; padding: 6px 8px; background: var(--card); border-radius: 18px; box-shadow: var(--shadow); max-width: calc(100% - 20px); }
-.steps li { display: flex; flex-direction: column; align-items: center; font-size: 11px; font-weight: 700; color: var(--sub); min-width: 38px; }
+.steps li { display: flex; flex-direction: column; align-items: center; font-size: 11px; font-weight: 700; color: var(--sub); min-width: 38px; word-break: normal; }
+@media (max-width: 374px) { .steps { width: calc(100% - 20px); gap: 2px; padding: 6px; } .steps li { flex: 1 1 0; min-width: 0; white-space: nowrap; font-size: 9.5px; letter-spacing: -0.03em; } }
 .steps li span { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: #eee8f5; font-size: 13px; margin-bottom: 2px; }
 .steps li.done span { background: var(--mint); color: #fff; }
 .steps li.now { color: var(--ink); }
@@ -301,3 +303,45 @@ button.title { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .mm-focus, .tour-label { animation: none; } }
 
 .lab-link { display: inline-block; margin-top: 2px; padding: 10px 18px; border-radius: 999px; background: rgba(255, 255, 255, 0.85); color: #1f86e0; font-weight: 800; font-size: 15px; text-decoration: none; box-shadow: var(--shadow); }
+
+/* ---- はっけん ずかん（ふたつの ラボで きょうつう） ---- */
+.splash-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 2px; }
+.splash-links .lab-link { margin-top: 0; }
+.zukan-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px 10px 16px; border-radius: 999px; background: linear-gradient(180deg, #fff6d6, #ffe7a3); color: #7a4a00; font-weight: 800; font-size: 15px; box-shadow: 0 3px 0 #e3b64a, var(--shadow); }
+.zukan-btn:active { transform: translateY(2px); }
+.zk-count { background: #fff; border-radius: 999px; padding: 1px 8px; font-size: 13px; color: #c27a00; }
+
+.stamp-toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 62px); z-index: 58; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border-radius: 999px; background: #fffdf5; box-shadow: 0 0 0 3px #ffd84d, 0 10px 28px rgba(120, 80, 0, 0.25); pointer-events: auto; text-align: left; max-width: calc(100vw - 24px); animation: toastIn 0.55s cubic-bezier(0.2, 1.6, 0.4, 1), toastOut 0.4s ease 2.8s forwards; }
+.st-sticker { flex: 0 0 52px; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 28px; border: 3px solid #fff; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18); animation: stickerSpin 0.7s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.st-text { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.st-text small { font-size: 12px; font-weight: 800; color: #e08a00; letter-spacing: 0.06em; }
+.st-text b { font-size: 16px; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-text em { font-style: normal; font-size: 11.5px; font-weight: 700; color: var(--sub); }
+@keyframes toastIn { from { transform: translate(-50%, -30px) scale(0.6); opacity: 0; } }
+@keyframes toastOut { to { transform: translate(-50%, -20px) scale(0.9); opacity: 0; visibility: hidden; } }
+@keyframes stickerSpin { from { transform: rotate(-200deg) scale(0.2); } }
+
+.zukan { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); background: rgba(58, 51, 80, 0.38); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); pointer-events: auto; animation: fadein 0.25s ease; }
+.zk-card { width: min(100%, 480px); max-height: 100%; display: flex; flex-direction: column; gap: 8px; padding: 14px 14px 10px; border-radius: 28px; background: #fffaf0; background-image: radial-gradient(#f3e6cc 1.2px, transparent 1.3px); background-size: 16px 16px; box-shadow: 0 0 0 4px #fff, 0 18px 40px rgba(60, 40, 0, 0.3); animation: popin 0.3s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.zk-head { display: flex; align-items: center; gap: 8px; }
+.zk-head b { font-size: 20px; font-weight: 800; white-space: nowrap; }
+.zk-head span { margin-left: auto; font-weight: 800; font-size: 15px; color: #c27a00; background: #fff; border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+@media (max-width: 374px) { .zk-head b { font-size: 17px; } .zk-head span { font-size: 13px; padding: 3px 8px; } }
+.zk-bar { height: 10px; border-radius: 999px; background: #f0e3c8; overflow: hidden; }
+.zk-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffd84d, #ff8db3, #5fc8ff); transition: width 0.6s ease; }
+.zk-lead, .zk-all, .zk-note { margin: 0; font-size: 13px; font-weight: 700; color: var(--sub); text-align: center; }
+.zk-all { font-size: 16px; color: #c27a00; padding: 6px; background: #fff3c4; border-radius: 14px; }
+.zk-note { font-size: 11px; opacity: 0.8; }
+.zk-scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 2px 2px 6px; }
+.zk-sec h3 { display: flex; align-items: center; gap: 6px; margin: 4px 2px 8px; font-size: 16px; font-weight: 800; }
+.zk-sec h3 small { font-size: 13px; color: var(--sub); }
+.zk-go { margin-left: auto; font-size: 13px; font-weight: 800; color: #1f86e0; text-decoration: none; background: #fff; border-radius: 999px; padding: 5px 12px; box-shadow: var(--shadow); }
+.zk-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 8px; }
+.zk-grid li { display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center; }
+.zk-sticker { width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; font-size: 34px; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(80, 60, 0, 0.22); }
+.zk-grid li.no .zk-sticker { background: rgba(255, 255, 255, 0.6); border: 3px dashed #d8c9a8; box-shadow: none; font-size: 26px; font-weight: 800; color: #cbb98f; }
+.zk-grid li b { font-size: 12.5px; font-weight: 800; line-height: 1.3; word-break: keep-all; overflow-wrap: anywhere; }
+.zk-grid li.no b { font-size: 11px; font-weight: 700; color: #a3967a; }
+.zk-grid li small { font-size: 11px; font-weight: 800; color: #c27a00; margin-top: -3px; }
+@media (min-width: 560px) { .zk-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .stamp-toast, .st-sticker, .zk-card { animation: none; } .stamp-toast { animation: toastOut 0.4s ease 2.8s forwards; } }
