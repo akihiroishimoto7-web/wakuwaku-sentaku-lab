@@ -4,7 +4,7 @@ import { resetSim, sim, startCycle, type CourseId, type PhaseId } from './sim'
 import { sound } from './sound'
 import { clearBodies, sendOut } from './clothSim'
 import { resetMicro } from './microState'
-import { beginTour, endTour, jumpChapter, tour as tourState } from './tour'
+import { beginTour, endTour, jumpChapter, showOverview, tour as tourState } from './tour'
 
 export type Step = 'intro' | 'choose' | 'detergent' | 'course' | 'running' | 'done' | 'finished'
 export type AppMode = 'wash' | 'micro' | 'experiment'
@@ -65,6 +65,7 @@ interface State {
   tourPaused: boolean
   tourDone: boolean
   tourAt: number
+  tourOv: boolean
   splash: boolean
 
   openDoor: () => void
@@ -101,6 +102,7 @@ interface State {
   gotoChapter: (ch: number) => void
   toggleTourPause: () => void
   finishTour: () => void
+  showOverview: () => void
 }
 
 const allBasket = () => Object.fromEntries(CLOTH_IDS.map((id) => [id, 'basket'])) as Record<ClothId, ItemLoc>
@@ -142,6 +144,7 @@ export const useStore = create<State>((set, get) => ({
   tourPaused: false,
   tourDone: false,
   tourAt: 0,
+  tourOv: false,
   splash: true,
 
   openDoor: () => {
@@ -330,7 +333,7 @@ export const useStore = create<State>((set, get) => ({
     if (!get().tour) return
     sound.whoosh()
     endTour()
-    set({ tour: false, tourDone: false, xray: false, focus: null })
+    set({ tour: false, tourDone: false, tourOv: false, xray: false, focus: null })
     get().camTo({ kind: 'home', dur: 1.6 })
   },
   setTourChapter: (ch) => set({ tourCh: ch }),
@@ -346,6 +349,12 @@ export const useStore = create<State>((set, get) => ({
   finishTour: () => {
     sound.melody()
     set({ tourDone: true })
+  },
+  showOverview: () => {
+    if (!get().tour) return
+    sound.whoosh()
+    showOverview()
+    set({ tourOv: true })
   },
   runExperiment: () => {
     if (get().expState === 'running') return

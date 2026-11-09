@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { speak } from '../../speech'
 import { StampToast, ZukanBook, ZukanButton } from '../../ui/Zukan'
+import { OverviewBanner } from '../../ui/OverviewBanner'
 import { fanSound } from '../sound'
 import { FAN_PARTS, FAN_PART_IDS, LEVELS, type Level } from '../data'
 import { laneModel, PITCH_NAME } from '../scene/Experiment'
@@ -168,6 +169,7 @@ function TourUI() {
   const slow = useFan((s) => s.slow)
   const muted = useFan((s) => s.muted)
   const tourAt = useFan((s) => s.tourAt)
+  const ov = useFan((s) => s.tourOv)
   const st = useFan.getState()
   const c = FAN_CHAPTERS[ch]
   const last = ch === FAN_CHAPTERS.length - 1
@@ -199,9 +201,20 @@ function TourUI() {
         </div>
       </header>
       {done && <div className="master">🏅 たんけん クリア！</div>}
+      {ov && <OverviewBanner first={ch === 0} who={c.spark ? '⚡' : '🌬️'} />}
       <div className="dock tour-dock">
         <div className="tour-card" key={ch}>
-          <FanMap ch={ch} />
+          <button
+            className="tour-mapbtn"
+            onClick={() => {
+              st.showOverview()
+              speak('いまは ここ！ きいろの みちを すすむよ')
+            }}
+            aria-label="ぜんたいを みる"
+          >
+            <FanMap ch={ch} />
+            <span className="mm-zoom">🗺️ ぜんたい</span>
+          </button>
           <div className="tc-body">
             <div className="tc-title">
               <span className="tc-icon">{c.icon}</span>

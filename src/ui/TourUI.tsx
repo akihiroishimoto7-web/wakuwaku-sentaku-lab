@@ -1,6 +1,7 @@
 import { speak } from '../speech'
 import { useStore } from '../store'
 import { CHAPTERS, GUIDES, fullRoute } from '../tour'
+import { OverviewBanner } from './OverviewBanner'
 
 // たんけんツアー中の画面（スマホで子どもが見やすいように、文字は短く、ボタンは大きく）
 export function TourUI() {
@@ -10,6 +11,7 @@ export function TourUI() {
   const slow = useStore((s) => s.slow)
   const muted = useStore((s) => s.muted)
   const tourAt = useStore((s) => s.tourAt)
+  const ov = useStore((s) => s.tourOv)
   const st = useStore.getState()
   const c = CHAPTERS[ch]
   const g = GUIDES[ch]
@@ -45,10 +47,21 @@ export function TourUI() {
       </header>
 
       {done && <div className="master">🏅 たんけん クリア！</div>}
+      {ov && <OverviewBanner first={ch === 0} />}
 
       <div className="dock tour-dock">
         <div className="tour-card" key={ch}>
-          <TourMap ch={ch} />
+          <button
+            className="tour-mapbtn"
+            onClick={() => {
+              st.showOverview()
+              speak('いまは ここ！ きいろの みちを すすむよ')
+            }}
+            aria-label="ぜんたいを みる"
+          >
+            <TourMap ch={ch} />
+            <span className="mm-zoom">🗺️ ぜんたい</span>
+          </button>
           <div className="tc-body">
             <div className="tc-title">
               <span className="tc-icon">{c.icon}</span>

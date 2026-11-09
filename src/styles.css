@@ -345,3 +345,21 @@ button.title { cursor: pointer; }
 .zk-grid li small { font-size: 11px; font-weight: 800; color: #c27a00; margin-top: -3px; }
 @media (min-width: 560px) { .zk-grid { grid-template-columns: repeat(4, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .stamp-toast, .st-sticker, .zk-card { animation: none; } .stamp-toast { animation: toastOut 0.4s ease 2.8s forwards; } }
+
+/* ---- たんけん：ぜんたいを みてみよう ---- */
+.tour-ov { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 58px); transform: translateX(-50%); z-index: 45; display: flex; flex-direction: column; align-items: center; gap: 2px; width: max-content; max-width: calc(100vw - 24px); padding: 6px 14px 7px; border-radius: 22px; background: rgba(255, 255, 255, 0.95); box-shadow: 0 0 0 3px #ffd23f, var(--shadow); text-align: center; pointer-events: none; animation: popin 0.4s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.tour-ov b { font-size: 17px; font-weight: 800; color: #1f78d1; }
+.tour-ov span { font-size: 13.5px; font-weight: 800; color: var(--ink); }
+.tour-ov em { font-style: normal; color: #d99a00; background: #fff4c2; border-radius: 6px; padding: 0 4px; }
+.ov-legend { display: flex; align-items: center; gap: 4px; font-size: 11.5px !important; color: var(--sub) !important; }
+.ov-legend i { display: inline-block; width: 18px; height: 6px; border-radius: 3px; margin-left: 6px; }
+.ov-legend i:first-child { margin-left: 0; }
+.lg-past { background: #2fb2ff; box-shadow: 0 0 0 1.5px #1b2546; }
+.lg-now { background: #ffd23f; box-shadow: 0 0 0 1.5px #1b2546; }
+.lg-next { background: #fff; box-shadow: 0 0 0 1.5px #1b2546; }
+.ov-here { white-space: nowrap; font-size: 17px; font-weight: 800; color: #3a2a00; background: linear-gradient(180deg, #fff6c8, #ffd23f); padding: 5px 12px; border-radius: 999px; box-shadow: 0 3px 0 #e0a800, 0 6px 14px rgba(0, 0, 0, 0.2); transition: opacity 0.2s; }
+.tour-mapbtn { position: relative; flex: 0 0 auto; padding: 0; background: none; border-radius: 18px; line-height: 0; }
+.tour-mapbtn:active { transform: scale(0.96); }
+.mm-zoom { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); white-space: nowrap; line-height: 1.2; font-size: 11.5px; font-weight: 800; color: #1f78d1; background: #fff; border-radius: 999px; padding: 2px 8px; box-shadow: 0 2px 6px rgba(40, 60, 120, 0.2); }
+@media (prefers-reduced-motion: reduce) { .tour-ov { animation: none; } }
+.tour-ov-on .tour-label { visibility: hidden; }

@@ -9,8 +9,14 @@ import { CLOTH_IDS, type ClothId } from '../data'
 import { sound } from '../sound'
 import { speak, stopSpeech } from '../speech'
 import { useStore } from '../store'
-import { airPhase, CHAPTERS, GUIDES, mapProgress, tour } from '../tour'
+import { airPhase, anchorAt, CHAPTERS, GUIDES, mapProgress, ROUTE, tour } from '../tour'
+import { fitOverview, samplePoints } from '../overview'
 import { ClothItem } from './Clothes'
+import { RouteOverlay, type OverviewState } from './RouteOverlay'
+
+// ぜんたいを みる ときに がめんに いれる ばしょ（みち ＋ せんたくきの かど）
+const FRAME_PTS = [...samplePoints(ROUTE), ...[-0.3, 0.3].flatMap((x) => [0, 0.88].flatMap((y) => [-0.33, 0.32].map((z) => new THREE.Vector3(x, y, z))))]
+const OV_DIR = new THREE.Vector3(0.55, 0.42, 1)
 
 // たんけんツアー：カメラを通り道にそって動かし、案内役の「しずくん」が先を進む
 export function Tour() {
@@ -44,12 +50,22 @@ function TourInner() {
       up: new THREE.Vector3(),
       right: new THREE.Vector3(),
       lab: new THREE.Vector3(),
+      rel: new THREE.Vector3(),
     }),
     [],
   )
   const last = useRef(-1)
   const blend = useRef(0)
   const muted = useStore((s) => s.muted)
+  const size = useThree((s) => s.size)
+  const ovView = useMemo(() => {
+    const aspect = size.width / size.height
+    const fov = Math.min(78, 44 * (aspect < 1 ? 1.25 : 1))
+    return { ...fitOverview(FRAME_PTS, OV_DIR, fov, aspect), fov }
+  }, [size])
+  const ov = useMemo<OverviewState>(() => ({ w: 0, ch: 0, here: new THREE.Vector3() }), [])
+  const ovRaw = useRef(0)
+  const ovWas = useRef(false)
 
   useEffect(() => {
     camera.near = 0.005
@@ -62,6 +78,7 @@ function TourInner() {
       camera.updateProjectionMatrix()
       demoBodies.clear()
       if (controls) controls.enabled = true
+      document.body.classList.remove('tour-ov-on')
       stopSpeech()
     }
   }, [camera, gl, controls])
@@ -83,9 +100,9 @@ function TourInner() {
       v.fromLook.copy(controls.target)
       blend.current = 0
       since.current = 0
-      useStore.setState({ xray: c.xray })
       sound.chime()
-      speak(`${c.title}。${c.text}`)
+      const pre = c.overview ? (tour.ch === 0 ? 'これから この みちを たびするよ。' : 'ぜんたいを みてみよう。いまは ここ！ ') : ''
+      speak(`${pre}${c.title}。${c.text}`)
     }
     since.current += Math.min(delta, 0.05)
     const real = Math.min(delta, 0.05)
@@ -104,12 +121,31 @@ function TourInner() {
     }
     camera.position.lerpVectors(v.fromPos, v.pos, k)
     v.cur.lerpVectors(v.fromLook, v.look, k)
+
+    // ぜんたいを みる：カメラを ひいて、みちと「いま ここ！」を みせる（とめている あいだは まつ）
+    const st = useStore.getState()
+    if (tour.ov > 0 && !st.tourPaused) tour.ov = Math.max(0, tour.ov - real)
+    const ovOn = tour.ov > 0
+    ovRaw.current = Math.min(1, Math.max(0, ovRaw.current + (ovOn ? real / 0.9 : -real / 1.1)))
+    const kw = ovRaw.current * ovRaw.current * (3 - 2 * ovRaw.current)
+    if (kw > 0) {
+      camera.position.lerp(ovView.pos, kw)
+      v.cur.lerp(ovView.look, kw)
+    }
+    if (ovOn !== st.tourOv) useStore.setState({ tourOv: ovOn })
+    if (ovOn !== ovWas.current) {
+      ovWas.current = ovOn
+      // ぜんたいを みている あいだは、ばしょの なふだを かくして「いま ここ！」だけに
+      document.body.classList.toggle('tour-ov-on', ovOn)
+    }
+    const wantX = c.xray || ovOn || kw > 0.3
+    if (st.xray !== wantX) useStore.setState({ xray: wantX })
     controls.enabled = false
     controls.target.copy(v.cur)
     camera.up.set(0, 1, 0)
     camera.lookAt(v.cur)
     // たて長のスマホでは横がせまく見えるので、少し広角にする
-    const fov = Math.min(78, c.fov * (camera.aspect < 1 ? 1.25 : 1))
+    const fov = THREE.MathUtils.lerp(Math.min(78, c.fov * (camera.aspect < 1 ? 1.25 : 1)), ovView.fov, kw)
     camera.fov += (fov - camera.fov) * Math.min(1, real * 2.5)
     camera.updateProjectionMatrix()
 
@@ -140,6 +176,15 @@ function TourInner() {
       guide.current.quaternion.copy(camera.quaternion)
       guide.current.rotateZ(Math.sin(t * 2) * 0.15)
     }
+    if (guide.current) {
+      // ぜんたいを みる ときは、しずくを ほんとうの ばしょに おおきく だす
+      anchorAt(tour.ch, u, v.rel)
+      if (!c.drop) guide.current.position.lerp(v.rel, kw)
+      if (kw > 0) guide.current.scale.setScalar(THREE.MathUtils.lerp(guide.current.scale.x, ovView.dist * 2, kw))
+      ov.here.copy(guide.current.position)
+    }
+    ov.w = kw
+    ov.ch = tour.ch
     if (lamp.current) lamp.current.position.copy(camera.position)
 
     // 画面の演出：スピード線、乾燥のときの冷たい／あつい色
@@ -165,7 +210,7 @@ function TourInner() {
         o = a ? 0.8 : 0
       }
       if (el.dataset.fx !== kind) el.dataset.fx = kind
-      el.style.opacity = String(o)
+      el.style.opacity = String(o * (1 - kw))
     }
   }, -0.5)
 
@@ -176,6 +221,7 @@ function TourInner() {
         <Droplet />
       </group>
       {demo && DEMO.map((id) => <ClothItem key={id} id={id} map={demoBodies} />)}
+      <RouteOverlay curves={ROUTE} state={ov} dist={ovView.dist} fov={ovView.fov} futureColor="#ffffff" hereText="💧 いま ここ！" />
       {GUIDES[ch].labels.map((l) => (
         <Html key={`${ch}-${l.text}`} position={l.pos} center zIndexRange={[20, 0]}>
           <div className="tour-label">{l.text}</div>

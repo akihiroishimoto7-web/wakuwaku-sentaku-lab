@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { OV_TIME } from '../overview'
 import { fan, stepFan } from './sim'
 import { useFan } from './store'
 
@@ -22,6 +23,8 @@ export interface FanChapter {
   spark: boolean // でんきの つぶ（黄色）か、かぜの つぶ（白）か
   fx?: 'speed'
   drop?: THREE.CatmullRomCurve3
+  // 章の はじめに カメラを ひいて「ぜんたい」を みせる
+  overview?: boolean
   pos: (u: number, out: THREE.Vector3) => void
   look: (u: number, out: THREE.Vector3) => void
   demo: (t: number, dur: number, dt: number) => void
@@ -68,6 +71,7 @@ const C10 = curve([[0.12, 0.92, 0.85], [0.3, 1.0, 1.4], [0.55, 1.15, 2.3]])
 export const FAN_CHAPTERS: FanChapter[] = [
   {
     icon: '🔌',
+    overview: true,
     title: 'コンセントから しゅっぱつ！',
     short: 'コードを とおって せんぷうきへ',
     text: 'きみは でんきの つぶ。かべの コンセントから、ながい コードを とおって せんぷうきへ むかうよ。',
@@ -151,6 +155,7 @@ export const FAN_CHAPTERS: FanChapter[] = [
   },
   {
     icon: '🌬️',
+    overview: true,
     title: 'かぜの つぶに へんしん！',
     short: 'うしろから すいこまれる',
     text: 'ここからは かぜの つぶ。せんぷうきの うしろの あみから、はねに すいこまれていくよ。',
@@ -210,6 +215,7 @@ export const FAN_CHAPTERS: FanChapter[] = [
   },
   {
     icon: '🎐',
+    overview: true,
     title: 'へやを たびしよう',
     short: 'かざぐるまと ふうりんへ',
     text: 'くびを ふるから、へやの あちこちに かぜが とどく。かざぐるまが くるくる、ふうりんが チリーン！',
@@ -279,14 +285,24 @@ export const fanTour = {
   ch: 0,
   t: 0,
   done: false,
+  ov: 0,
   snapshot: null as null | { level: typeof fan.level; osc: boolean; yawPhase: number },
 }
+
+export function showFanOverview() {
+  fanTour.ov = OV_TIME
+}
+
+// ぜんたいを みる ときに かく みち（章ごと。みちの ない 章は null）
+export const FAN_ROUTE: (THREE.Curve<THREE.Vector3> | null)[] = FAN_CHAPTERS.map((c) => c.drop ?? null)
 
 export function beginFanTour() {
   fanTour.snapshot = { level: fan.level, osc: fan.osc, yawPhase: fan.yawPhase }
   fanTour.ch = 0
   fanTour.t = 0
   fanTour.done = false
+  // さいしょは「へんしん！」の えんしゅつの あとまで ぜんたいを みせる
+  fanTour.ov = FAN_CHAPTERS[0].overview ? OV_TIME + 1.5 : 0
   fan.tourOverride = true
 }
 export function endFanTour() {
@@ -302,16 +318,19 @@ export function jumpFanChapter(ch: number) {
   fanTour.ch = Math.max(0, Math.min(FAN_CHAPTERS.length - 1, ch))
   fanTour.t = 0
   fanTour.done = false
+  fanTour.ov = FAN_CHAPTERS[fanTour.ch].overview ? OV_TIME : 0
 }
 export function stepFanTour(dt: number) {
   const c = FAN_CHAPTERS[fanTour.ch]
-  fanTour.t = Math.min(c.dur, fanTour.t + dt)
+  // ぜんたいを みている あいだは、章の じかんを すすめない（うごきは つづける）
+  if (fanTour.ov <= 0) fanTour.t = Math.min(c.dur, fanTour.t + dt)
   c.demo(fanTour.t, c.dur, dt)
   fan.yaw = 0.7 * Math.sin(fan.yawPhase)
   if (fanTour.t >= c.dur) {
     if (fanTour.ch < FAN_CHAPTERS.length - 1) {
       fanTour.ch++
       fanTour.t = 0
+      fanTour.ov = FAN_CHAPTERS[fanTour.ch].overview ? OV_TIME : 0
       useFan.getState().setTourChapter(fanTour.ch)
     } else if (!fanTour.done) {
       fanTour.done = true

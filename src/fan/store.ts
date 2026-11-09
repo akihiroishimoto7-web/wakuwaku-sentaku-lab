@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { FAN_PARTS, type FanPartId, type Level } from './data'
 import { fan } from './sim'
 import { fanSound } from './sound'
-import { beginFanTour, endFanTour, fanTour, jumpFanChapter } from './tour'
+import { beginFanTour, endFanTour, fanTour, jumpFanChapter, showFanOverview } from './tour'
 
 export type FanCam = { kind: 'home'; dur?: number } | { kind: 'part'; part: FanPartId } | { kind: 'experiment' }
 export type Pitch = 'flat' | 'mid' | 'steep'
@@ -28,6 +28,7 @@ interface FanState {
   tourPaused: boolean
   tourDone: boolean
   tourAt: number
+  tourOv: boolean
   lanes: FanLane[]
   expState: 'idle' | 'running' | 'done'
   expProgress: number[]
@@ -49,6 +50,7 @@ interface FanState {
   gotoChapter: (ch: number) => void
   toggleTourPause: () => void
   finishTour: () => void
+  showOverview: () => void
   setMode: (m: 'play' | 'experiment') => void
   setLane: (i: number, lane: Partial<FanLane>) => void
   runExperiment: () => void
@@ -72,6 +74,7 @@ export const useFan = create<FanState>((set, get) => ({
   tourPaused: false,
   tourDone: false,
   tourAt: 0,
+  tourOv: false,
   lanes: [
     { blades: 3, pitch: 'mid', strong: true },
     { blades: 5, pitch: 'mid', strong: true },
@@ -139,7 +142,7 @@ export const useFan = create<FanState>((set, get) => ({
     if (!get().tour) return
     fanSound.whoosh()
     endFanTour()
-    set({ tour: false, tourDone: false, xray: false, focus: null, level: fan.level, osc: fan.osc })
+    set({ tour: false, tourDone: false, tourOv: false, xray: false, focus: null, level: fan.level, osc: fan.osc })
     get().camTo({ kind: 'home', dur: 1.6 })
   },
   setTourChapter: (ch) => set({ tourCh: ch }),
@@ -155,6 +158,12 @@ export const useFan = create<FanState>((set, get) => ({
   finishTour: () => {
     fanSound.melody()
     set({ tourDone: true })
+  },
+  showOverview: () => {
+    if (!get().tour) return
+    fanSound.whoosh()
+    showFanOverview()
+    set({ tourOv: true })
   },
   setMode: (m) => {
     fanSound.click()

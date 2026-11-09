@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { AIR_PATH, TUB_C } from './data'
+import { OV_TIME } from './overview'
 import { sim } from './sim'
 import { useStore } from './store'
 
@@ -19,6 +20,8 @@ export interface Chapter {
   fx?: 'speed'
   // しずくが進む本当の水の通り道（あるときは、少しはなれた所からしずくを見まもる）
   drop?: THREE.CatmullRomCurve3
+  // 章の はじめに カメラを ひいて「ぜんたい」を みせる
+  overview?: boolean
 }
 
 type P = [number, number, number]
@@ -76,6 +79,7 @@ export const CHAPTERS: Chapter[] = [
     dur: 9,
     xray: true,
     fov: 44,
+    overview: true,
     ...chase(D1, [0.12, 0.22, 0.42]),
     demo: (t, _d, dt) => {
       quiet(dt)
@@ -126,6 +130,7 @@ export const CHAPTERS: Chapter[] = [
     dur: 8,
     xray: true,
     fov: 44,
+    overview: true,
     ...chase(D4, [0.36, 0.06, 0.22]),
     demo: (t, d, dt) => {
       quiet(dt)
@@ -173,6 +178,7 @@ export const CHAPTERS: Chapter[] = [
     dur: 8,
     xray: true,
     fov: 44,
+    overview: true,
     ...chase(D6, [0.16, 0.12, 0.42]),
     demo: (t, d, dt) => {
       quiet(dt)
@@ -233,6 +239,7 @@ export const CHAPTERS: Chapter[] = [
     dur: 12,
     xray: true,
     fov: 44,
+    overview: true,
     ...chase(D9, [0.1, 0.22, 0.45]),
     demo: (t, _d, dt) => {
       quiet(dt)
@@ -260,6 +267,27 @@ export const CHAPTERS: Chapter[] = [
   },
 ]
 
+// ---- ぜんたいを みる ときの みち（章ごと）と、みちの ない 章での しずくの いばしょ ----
+const drumRing = (r: number, z: number) =>
+  new THREE.CatmullRomCurve3(
+    Array.from({ length: 24 }, (_, i) => {
+      const a = (i / 24) * Math.PI * 2 - Math.PI / 2
+      return new THREE.Vector3(TUB_C.x + Math.cos(a) * r, TUB_C.y + Math.sin(a) * r, z)
+    }),
+    true,
+  )
+const WASH_RING = drumRing(0.14, 0.04)
+const SPIN_RING = drumRing(0.205, -0.02)
+export const ROUTE: (THREE.Curve<THREE.Vector3> | null)[] = CHAPTERS.map((c, i) => c.drop ?? (i === 4 ? WASH_RING : i === 7 ? SPIN_RING : null))
+
+export function anchorAt(ch: number, u: number, out: THREE.Vector3) {
+  const c = CHAPTERS[ch]
+  if (c.drop) return c.drop.getPointAt(ease(Math.min(1, Math.max(0, u))), out)
+  if (ch === 4) return WASH_RING.getPointAt((u * 0.6) % 1, out)
+  if (ch === 7) return SPIN_RING.getPointAt((u * 3) % 1, out)
+  return out.set(TUB_C.x, TUB_C.y - 0.04, 0.1)
+}
+
 // 乾燥の章で、いま風が「ひやされている／あたためられている」ところか
 export function airPhase(u: number): '' | 'cold' | 'hot' {
   const p = 0.02 + ease(u) * 0.9
@@ -275,13 +303,19 @@ const KEYS = [
 ] as const
 type Snapshot = Record<(typeof KEYS)[number], number>
 
-export const tour = { ch: 0, t: 0, done: false, snapshot: null as Snapshot | null }
+export const tour = { ch: 0, t: 0, done: false, ov: 0, snapshot: null as Snapshot | null }
+
+export function showOverview() {
+  tour.ov = OV_TIME
+}
 
 export function beginTour() {
   tour.snapshot = Object.fromEntries(KEYS.map((k) => [k, sim[k]])) as Snapshot
   tour.ch = 0
   tour.t = 0
   tour.done = false
+  // さいしょは「へんしん！」の えんしゅつの あとまで ぜんたいを みせる
+  tour.ov = CHAPTERS[0].overview ? OV_TIME + 1.5 : 0
   sim.level = 0
   sim.foam = 0
   sim.waterDirt = 0
@@ -301,11 +335,13 @@ export function jumpChapter(ch: number) {
   tour.ch = Math.max(0, Math.min(CHAPTERS.length - 1, ch))
   tour.t = 0
   tour.done = false
+  tour.ov = CHAPTERS[tour.ch].overview ? OV_TIME : 0
 }
 
 export function stepTour(dt: number) {
   const c = CHAPTERS[tour.ch]
-  tour.t = Math.min(c.dur, tour.t + dt)
+  // ぜんたいを みている あいだは、章の じかんを すすめない（うごきは つづける）
+  if (tour.ov <= 0) tour.t = Math.min(c.dur, tour.t + dt)
   c.demo(tour.t, c.dur, dt)
   sim.time += dt
   sim.dt = dt
@@ -317,6 +353,7 @@ export function stepTour(dt: number) {
     if (tour.ch < CHAPTERS.length - 1) {
       tour.ch++
       tour.t = 0
+      tour.ov = CHAPTERS[tour.ch].overview ? OV_TIME : 0
       useStore.getState().setTourChapter(tour.ch)
     } else if (!tour.done) {
       tour.done = true

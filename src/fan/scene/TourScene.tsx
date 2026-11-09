@@ -7,8 +7,25 @@ import { speak, stopSpeech } from '../../speech'
 import { softDotTexture } from '../../textures'
 import { fanSound } from '../sound'
 import { useFan } from '../store'
-import { FAN_CHAPTERS, fanMapProgress, fanTour } from '../tour'
+import { FAN_CHAPTERS, FAN_ROUTE, fanMapProgress, fanTour } from '../tour'
+import { ARM_WRIST, OUTLET_POS } from '../data'
+import { fitOverview, samplePoints } from '../../overview'
+import { RouteOverlay, type OverviewState } from '../../scene/RouteOverlay'
 import { skinState } from './Props'
+import { partWorld } from './Rig'
+
+// ぜんたいを みる ときに がめんに いれる ばしょ（みち ＋ コンセント・だい・うで）
+const FRAME_PTS = [...samplePoints(FAN_ROUTE), OUTLET_POS.clone(), new THREE.Vector3(0, 0, 0.2), new THREE.Vector3(0, 1.0, 0), ARM_WRIST.clone()]
+// へやの ちずの ように、ななめ うえから すこし ほそい がかくで みおろす
+const OV_DIR = new THREE.Vector3(0.22, 1.35, 1)
+
+// みちの ない 章で、つぶが いる ばしょ
+function anchorAt(ch: number, u: number, out: THREE.Vector3) {
+  const c = FAN_CHAPTERS[ch]
+  if (c.drop) return c.drop.getPointAt(easeU(Math.min(1, Math.max(0, u))), out)
+  if (ch === 6) return partWorld('gear', out)
+  return out.copy(ARM_WRIST)
+}
 
 // 扇風機のたんけん：カメラを道にそって動かし、案内役（でんきの つぶ → かぜの つぶ）が進む
 export function FanTourScene() {
@@ -32,6 +49,16 @@ function Inner() {
   )
   const last = useRef(-1)
   const blend = useRef(0)
+  const size = useThree((s) => s.size)
+  const ovView = useMemo(() => {
+    const aspect = size.width / size.height
+    const fov = 30 * (aspect < 1 ? 1.25 : 1)
+    return { ...fitOverview(FRAME_PTS, OV_DIR, fov, aspect), fov }
+  }, [size])
+  const ov = useMemo<OverviewState>(() => ({ w: 0, ch: 0, here: new THREE.Vector3() }), [])
+  const ovRaw = useRef(0)
+  const ovWas = useRef(false)
+  const tmp = useMemo(() => new THREE.Vector3(), [])
   const since = useRef(0)
   const tick = useRef(0)
   const fx = useRef<HTMLElement | null>(null)
@@ -45,6 +72,7 @@ function Inner() {
       skinState.show = 0
       skinState.cool = 0
       if (controls) controls.enabled = true
+      document.body.classList.remove('tour-ov-on')
       stopSpeech()
     }
   }, [camera, controls])
@@ -61,9 +89,9 @@ function Inner() {
       v.fromLook.copy(controls.target)
       blend.current = 0
       since.current = 0
-      useFan.setState({ xray: c.xray })
       fanSound.chimeTour()
-      speak(`${c.title}。${c.text}`)
+      const pre = c.overview ? (fanTour.ch === 0 ? 'これから この みちを たびするよ。' : 'ぜんたいを みてみよう。いまは ここ！ ') : ''
+      speak(`${pre}${c.title}。${c.text}`)
     }
     const real = Math.min(delta, 0.05)
     since.current += real
@@ -81,11 +109,30 @@ function Inner() {
     }
     camera.position.lerpVectors(v.fromPos, v.pos, k)
     v.cur.lerpVectors(v.fromLook, v.look, k)
+
+    // ぜんたいを みる：へやを うえから みおろして、みちと「いま ここ！」を みせる
+    const st = useFan.getState()
+    if (fanTour.ov > 0 && !st.tourPaused) fanTour.ov = Math.max(0, fanTour.ov - real)
+    const ovOn = fanTour.ov > 0
+    ovRaw.current = Math.min(1, Math.max(0, ovRaw.current + (ovOn ? real / 0.9 : -real / 1.1)))
+    const kw = ovRaw.current * ovRaw.current * (3 - 2 * ovRaw.current)
+    if (kw > 0) {
+      camera.position.lerp(ovView.pos, kw)
+      v.cur.lerp(ovView.look, kw)
+    }
+    if (ovOn !== st.tourOv) useFan.setState({ tourOv: ovOn })
+    if (ovOn !== ovWas.current) {
+      ovWas.current = ovOn
+      document.body.classList.toggle('tour-ov-on', ovOn)
+    }
+    // へやの ようすが わかるよう、ぜんたいの ときは すけない すがたで
+    const wantX = ovOn || kw > 0.3 ? false : c.xray
+    if (st.xray !== wantX) useFan.setState({ xray: wantX })
     controls.enabled = false
     controls.target.copy(v.cur)
     camera.up.set(0, 1, 0)
     camera.lookAt(v.cur)
-    const fov = Math.min(76, c.fov * (camera.aspect < 1 ? 1.25 : 1))
+    const fov = THREE.MathUtils.lerp(Math.min(76, c.fov * (camera.aspect < 1 ? 1.25 : 1)), ovView.fov, kw)
     camera.fov += (fov - camera.fov) * Math.min(1, real * 2.5)
     camera.updateProjectionMatrix()
 
@@ -105,12 +152,20 @@ function Inner() {
         g.position.copy(camera.position).addScaledVector(v.fwd, 0.1).addScaledVector(v.right, -0.024 * Math.min(1.6, camera.aspect)).addScaledVector(v.up, -0.006)
         g.scale.setScalar(0.45 * bounce)
       }
+      // ぜんたいを みる ときは、つぶを ほんとうの ばしょに おおきく だす
+      anchorAt(fanTour.ch, u, tmp)
+      if (!c.drop) g.position.lerp(tmp, kw)
+      if (kw > 0) g.scale.setScalar(THREE.MathUtils.lerp(g.scale.x, ovView.dist * 2, kw))
+      ov.here.copy(g.position)
       g.quaternion.copy(camera.quaternion)
       g.rotateZ(Math.sin(t * 2) * 0.15)
       if (spark.current) spark.current.visible = c.spark
       if (puff.current) puff.current.visible = !c.spark
       if (spark.current && c.spark) spark.current.rotation.z = t * 2
     }
+
+    ov.w = kw
+    ov.ch = fanTour.ch
 
     // はだの章
     const skinOn = fanTour.ch === 8
@@ -132,7 +187,7 @@ function Inner() {
     if (fx.current) {
       const kind = c.fx ?? ''
       if (fx.current.dataset.fx !== kind) fx.current.dataset.fx = kind
-      fx.current.style.opacity = String(kind ? 0.45 * Math.min(1, since.current * 2) : 0)
+      fx.current.style.opacity = String(kind ? 0.45 * Math.min(1, since.current * 2) * (1 - kw) : 0)
     }
   }, -0.5)
 
@@ -146,6 +201,7 @@ function Inner() {
           <Puff />
         </group>
       </group>
+      <RouteOverlay curves={FAN_ROUTE} state={ov} dist={ovView.dist} fov={ovView.fov} futureColor="#ffffff" hereText={FAN_CHAPTERS[ch].spark ? '⚡ いま ここ！' : '🌬️ いま ここ！'} />
       {FAN_CHAPTERS[ch].labels.map((l) => (
         <Html key={`${ch}-${l.text}`} position={l.pos} center zIndexRange={[20, 0]}>
           <div className="tour-label">{l.text}</div>
